@@ -83,8 +83,8 @@ publishing {
             artifact sourcesJar {
                 classifier "sources"
             }
-            groupId 'propCheck'
-            artifactId 'propCheck-kt'
+            groupId 'kotlin-pretty'
+            artifactId 'kotlin-pretty'
             version '0.1'
             pom.withXml {
                 def root = asNode()
