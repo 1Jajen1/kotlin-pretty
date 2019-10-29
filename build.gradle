@@ -58,7 +58,7 @@ artifacts {
 def pomConfig = {
     licenses {
         license {
-            name "MIT"
+            name "BSD-3"
             url "https://github.com/1Jajen1/kotlin-pretty/blob/master/LICENSE"
             distribution "repo"
         }
@@ -105,7 +105,7 @@ bintray {
     pkg {
         repo = 'kotlin-pretty'
         name = 'kotlin-pretty'
-        licenses = ['MIT']
+        licenses = ['BSD-3']
         vcsUrl = 'https://github.com/1Jajen1/kotlin-pretty'
         version {
             name = '0.2'
