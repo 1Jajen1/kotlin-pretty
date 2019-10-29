@@ -31,6 +31,7 @@ dependencies {
 
     kapt "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
 
+    implementation "io.arrow-kt:arrow-syntax:$arrow_version" // helper functions like curried...
     implementation "io.arrow-kt:arrow-recursion:$arrow_version" // Recursion schemes
 }
 
@@ -54,12 +55,11 @@ artifacts {
     archives sourcesJar
 }
 
-/*
 def pomConfig = {
     licenses {
         license {
-            name "BSD 3-Clause"
-            url "https://github.com/1Jajen1/propCheck/blob/master/LICENSE"
+            name "MIT"
+            url "https://github.com/1Jajen1/kotlin-pretty/blob/master/LICENSE"
             distribution "repo"
         }
     }
@@ -72,7 +72,7 @@ def pomConfig = {
     }
 
     scm {
-        url "https://github.com/1Jajen1/propCheck"
+        url "https://github.com/1Jajen1/kotlin-pretty"
     }
 }
 
@@ -88,9 +88,9 @@ publishing {
             version '0.9.6'
             pom.withXml {
                 def root = asNode()
-                root.appendNode('description', 'Property based testing for kotlin')
-                root.appendNode('name', 'propCheck-kt')
-                root.appendNode('url', 'https://github.com/1Jajen1/propCheck')
+                root.appendNode('description', 'Kotlin pretty printer implementation')
+                root.appendNode('name', 'kotlin-pretty')
+                root.appendNode('url', 'https://github.com/1Jajen1/kotlin-pretty')
                 root.children().last() + pomConfig
             }
         }
@@ -103,14 +103,13 @@ bintray {
     key = System.getenv('BINTRAY_KEY')
     publications = ['mavenPublication']
     pkg {
-        repo = 'propCheck-kt'
-        name = 'propCheck-kt'
-        licenses = ['BSD 3-Clause']
-        vcsUrl = 'https://github.com/1Jajen1/propCheck'
+        repo = 'kotlin-pretty'
+        name = 'kotlin-pretty'
+        licenses = ['MIT']
+        vcsUrl = 'https://github.com/1Jajen1/kotlin-pretty'
         version {
             name = '0.9.6'
             released  = new Date()
         }
     }
 }
-*/
