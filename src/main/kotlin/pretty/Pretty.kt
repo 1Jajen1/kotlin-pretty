@@ -136,7 +136,7 @@ fun SimpleDoc.layout(): String = SimpleDoc.birecursive().run {
         when (val dF = it.fix()) {
             is SimpleDocF.NilF -> ""
             is SimpleDocF.Text -> dF.str + dF.doc
-            is SimpleDocF.Line -> "\n".padEnd(dF.i) + dF.doc
+            is SimpleDocF.Line -> "\n" + (0 until dF.i).map { " " }.joinToString("") + dF.doc
         }
     }
 }
