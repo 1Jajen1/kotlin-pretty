@@ -16,19 +16,10 @@ Example:
 data class Tree(val root: String, val branches: List<Tree>)
 
 fun Tree.show(): Doc =
-    (root.text() + ":".text() space branches.showBranches().nest(root.length))
-
-fun List<Tree>.showBranches(): Doc = when {
-    isEmpty() -> "[]".text()
-    else -> showTrees().bracket("[", "]").nest(1)
-}
-
-fun List<Tree>.showTrees(): Doc = when (size) {
-    1 -> first().show()
-    else -> (first() to drop(1)).let { (x, xs) ->
-        x.show() + ",".text() newline xs.showTrees()
-    }
-}
+    (root.text() + ":".text() softLine branches
+        .map { it.show().nest(2) }
+        .encloseSep(lBracket(), line() + rBracket(), comma() + space())
+        .nest(root.length)).group()
 
 val example = Tree(
     "H",
@@ -50,14 +41,12 @@ val example = Tree(
 )
 
 fun main() {
-    example.show().pretty(maxWidth = 30).also(::println)
+    example.show().also(::println).pretty(maxWidth = 80, ribbonWidth = 0.4F).also(::println)
 }
 // prints =>
-H: [
-    E: [
-        L: [ L: [ O: [] ] ],
-        LL: []
-      ],
-    World: []
-  ]
+H: [ E: [ L: [ L: [ O: [  ] ] ]
+        , LL: [  ]
+        ]
+   , World: [  ]
+   ]
 ```
