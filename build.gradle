@@ -1,0 +1,116 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.+'
+    }
+}
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.3.50'
+    id "com.github.johnrengelman.shadow" version "2.0.2"
+    id 'maven-publish'
+    id "com.jfrog.bintray" version "1.8.0"
+}
+
+repositories {
+    jcenter()
+    maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
+}
+
+apply plugin: 'kotlin-kapt'
+
+group 'kotlin-pretty'
+version '0.1'
+
+def arrow_version = "0.10.2"
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.3.21" // For forAll instance lookups
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    kapt "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
+
+    implementation "io.arrow-kt:arrow-recursion:$arrow_version" // Recursion schemes
+}
+
+test {
+    useJUnitPlatform()
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+/*
+def pomConfig = {
+    licenses {
+        license {
+            name "BSD 3-Clause"
+            url "https://github.com/1Jajen1/propCheck/blob/master/LICENSE"
+            distribution "repo"
+        }
+    }
+    developers {
+        developer {
+            id "jannis"
+            name "Jannis Overesch"
+            email "overesch.jannis@gmail.com"
+        }
+    }
+
+    scm {
+        url "https://github.com/1Jajen1/propCheck"
+    }
+}
+
+publishing {
+    publications {
+        mavenPublication(MavenPublication) {
+            from components.java
+            artifact sourcesJar {
+                classifier "sources"
+            }
+            groupId 'propCheck'
+            artifactId 'propCheck-kt'
+            version '0.9.6'
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', 'Property based testing for kotlin')
+                root.appendNode('name', 'propCheck-kt')
+                root.appendNode('url', 'https://github.com/1Jajen1/propCheck')
+                root.children().last() + pomConfig
+            }
+        }
+    }
+}
+
+bintray {
+    publish = true
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = ['mavenPublication']
+    pkg {
+        repo = 'propCheck-kt'
+        name = 'propCheck-kt'
+        licenses = ['BSD 3-Clause']
+        vcsUrl = 'https://github.com/1Jajen1/propCheck'
+        version {
+            name = '0.9.6'
+            released  = new Date()
+        }
+    }
+}
+*/
