@@ -15,10 +15,10 @@ Example:
 ```kotlin
 data class Tree(val root: String, val branches: List<Tree>)
 
-fun Tree.show(): Doc =
-    (root.text() + ":".text() softLine branches
+fun Tree.show(): Doc<Nothing> =
+    (root.text<Nothing>() + ":".text() softLine branches
         .map { it.show().nest(2) }
-        .encloseSep(lBracket(), line() + rBracket(), comma() + space())
+        .encloseSep(lBracket(), line<Nothing>() + rBracket(), comma())
         .nest(root.length)).group()
 
 val example = Tree(
@@ -41,7 +41,7 @@ val example = Tree(
 )
 
 fun main() {
-    example.show().also(::println).pretty(maxWidth = 80, ribbonWidth = 0.4F).also(::println)
+    example.show().pretty(maxWidth = 80, ribbonWidth = 0.4F).also(::println)
 }
 // prints =>
 H: [ E: [ L: [ L: [ O: [  ] ] ]
