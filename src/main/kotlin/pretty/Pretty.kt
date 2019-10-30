@@ -18,6 +18,7 @@ import pretty.doc.functor.functor
 import pretty.doc.monoid.monoid
 import pretty.doc.semigroup.semigroup
 import pretty.docf.functor.functor
+import pretty.docf.functor.map
 import pretty.simpledoc.birecursive.birecursive
 import pretty.simpledocf.functor.functor
 import kotlin.math.max
@@ -304,13 +305,13 @@ fun <A> Doc<A>.align(): Doc<A> = column { k ->
 }
 
 fun <A> Doc<A>.flatten(): Doc<A> = Doc.birecursive<A>().run {
-    cata {
+    para {
         // This is why I love recursion schemes!
         when (val dF = it.fix()) {
             is DocF.Line -> if (dF.empty) nil() else " ".text()
-            is DocF.Union -> dF.l
-            is DocF.FlatAlt -> dF.r
-            else -> Doc<A>(dF)
+            is DocF.Union -> dF.l.b
+            is DocF.FlatAlt -> dF.r.a
+            else -> Doc(it.map { it.b })
         }
     }
 }
