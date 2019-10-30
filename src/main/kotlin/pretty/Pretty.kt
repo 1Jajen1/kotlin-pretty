@@ -218,7 +218,7 @@ internal fun <A> be(w: Int, r: Int, n: Int, k: Int, ls: Step<A>): SimpleDoc<A> =
         is DocF.Column -> be(w, r, n, k, Step.Cons(ls.i, dF.doc(k), ls.tail))
         is DocF.Annotated -> SimpleDoc.addAnnotation(
             dF.ann,
-            be(w, r, n, k, Step.Cons(ls.i, dF.doc, ls.tail))
+            be(w, r, n, k, Step.Cons(ls.i, dF.doc, Step.UndoAnnotation(ls.tail)))
         )
         is DocF.FlatAlt -> be(w, r, n, k, Step.Cons(ls.i, dF.l, ls.tail))
     }
