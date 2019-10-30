@@ -393,7 +393,8 @@ fun <A> pipe(): Doc<A> = "|".text()
 fun <A> String.doc(): Doc<A> = when {
     isEmpty() -> nil()
     else -> takeWhile { it != '\n' }.let { fst ->
-        fst.text<A>() + line() + if (fst.length + 1 < length) substring(fst.length + 1).doc() else nil()
+        if (fst.length >= length) fst.text()
+        else fst.text<A>() + line() + substring(fst.length + 1).doc()
     }
 }
 
