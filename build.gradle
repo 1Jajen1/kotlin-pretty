@@ -22,7 +22,7 @@ repositories {
 apply plugin: 'kotlin-kapt'
 
 group 'kotlin-pretty'
-version '0.3.2'
+version '0.3.3'
 
 def arrow_version = "0.10.2"
 dependencies {
@@ -85,7 +85,7 @@ publishing {
             }
             groupId 'kotlin-pretty'
             artifactId 'kotlin-pretty'
-            version '0.3.2'
+            version '0.3.3'
             pom.withXml {
                 def root = asNode()
                 root.appendNode('description', 'Kotlin pretty printer implementation')
@@ -108,7 +108,7 @@ bintray {
         licenses = ['BSD-3']
         vcsUrl = 'https://github.com/1Jajen1/kotlin-pretty'
         version {
-            name = '0.3.2'
+            name = '0.3.3'
             released  = new Date()
         }
     }
