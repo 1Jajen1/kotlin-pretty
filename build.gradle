@@ -17,6 +17,7 @@ plugins {
 repositories {
     jcenter()
     maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
+    maven { url 'https://dl.bintray.com/jannis/propCheck-kt' }
 }
 
 apply plugin: 'kotlin-kapt'
@@ -33,6 +34,17 @@ dependencies {
 
     implementation "io.arrow-kt:arrow-syntax:$arrow_version" // helper functions like curried...
     implementation "io.arrow-kt:arrow-recursion:$arrow_version" // Recursion schemes
+
+    kaptTest "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
+
+    testImplementation "propCheck:propCheck-kt:0.9.6"
+
+    testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2") {
+        exclude group: "io.arrow-kt"
+    }
+    testImplementation("io.arrow-kt:arrow-test:$arrow_version") { // test helpers and laws
+        exclude group: "io.kotlintest"
+    }
 }
 
 test {
