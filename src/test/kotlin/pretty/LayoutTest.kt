@@ -41,7 +41,7 @@ class LayoutTest : PropertySpec({
 })
 
 // This is kept to verify against the current one (this one is almost the same as prettyPrinter's)
-// old impl based 1 on 1 on the paper/prettyPrint, use the equivalent (but faster due to laziness, at least I think so) version above
+// this was the function used before the recursion scheme change
 fun <A> Doc<A>.best(pw: PageWidth): SimpleDoc<A> = be(pw, 0, 0, Step.Cons(0, this, Step.Empty()))
 
 internal fun ribbonW(w: Int, r: Float): Int = max(0, min(w, round(w * r).toInt()))

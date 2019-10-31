@@ -1,10 +1,7 @@
 package pretty
 
-import arrow.core.Option
+import arrow.core.*
 import arrow.core.extensions.fx
-import arrow.core.getOrElse
-import arrow.core.none
-import arrow.core.some
 import pretty.doc.birecursive.birecursive
 import pretty.simpledoc.birecursive.birecursive
 import kotlin.math.max
@@ -62,7 +59,8 @@ fun <A> Doc<A>.layoutWadlerLeijen(
                 })
         ) x else y()
 
-    // option marks failure
+    // option marks fail and shorts everything
+    // TODO use cataM and eval? that is problemativ
     this@layoutWadlerLeijen.cata<(n: Int, k: Int, i: Int, nextEl: (nextN: Int, nextK: Int, nextI: Int) -> Option<SimpleDoc<A>>) -> Option<SimpleDoc<A>>> {
         { n, k, i, next ->
             when (val dF = it.fix()) {
@@ -72,21 +70,17 @@ fun <A> Doc<A>.layoutWadlerLeijen(
                 is DocF.Combined ->
                     dF.l(n, k, i) { a, b, _ -> dF.r(a, b, i, next) }
                 is DocF.Union ->
-                    // TODO this looks ugly
-                    dF.l(n, k, i, next).getOrElse { SimpleDoc(SimpleDocF.Fail()) }.let { l ->
+                    dF.l(n, k, i, next).map { l ->
                         selectNicer(n, k, l) {
                             dF.r(n, k, i, next).getOrElse { SimpleDoc(SimpleDocF.Fail()) }
                         }
-                            .let { res -> if (res.unDoc is SimpleDocF.Fail) none() else res.some() }
-                    }
+                    }.orElse { dF.r(n, k, i, next) }
                 is DocF.Line -> next(i, i, 0).map { SimpleDoc.line(i, it) }
                 is DocF.WithPageWidth -> dF.doc(pageWidth)(n, k, i, next)
                 is DocF.Annotated ->
                     dF.doc(n, k, i) { a, b, c ->
-                        next(a, b, c)
-                            .map { SimpleDoc.removeAnnotation(it) }
-                    }
-                        .map { SimpleDoc.addAnnotation(dF.ann, it) }
+                        next(a, b, c).map { SimpleDoc.removeAnnotation(it) }
+                    }.map { SimpleDoc.addAnnotation(dF.ann, it) }
                 is DocF.FlatAlt -> dF.l(n, k, i, next)
                 is DocF.Fail -> none()
                 is DocF.Nest -> dF.doc(n, k, i + dF.i) { a, b, _ -> next(a, b, i) }
