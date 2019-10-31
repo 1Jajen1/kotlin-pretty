@@ -19,9 +19,9 @@ fun <A> nil(): Doc<A> = Doc.monoid<A>().empty()
 
 fun <A> String.text(): Doc<A> = Doc<A>(DocF.Text(this))
 
-fun <A> line(): Doc<A> = Doc<A>(DocF.Line()).flatAlt(" ".text())
+fun <A> line(): Doc<A> = hardLine<A>().flatAlt(" ".text())
 
-fun <A> lineBreak(): Doc<A> = Doc<A>(DocF.Line()).flatAlt(nil())
+fun <A> lineBreak(): Doc<A> = hardLine<A>().flatAlt(nil())
 
 fun <A> softLine(): Doc<A> = line<A>().group()
 

@@ -1,8 +1,12 @@
 package pretty
 
 import arrow.core.*
+import arrow.core.extensions.eval.functor.functor
 import arrow.core.extensions.fx
+import arrow.mtl.typeclasses.ComposedFunctor
+import arrow.recursion.hyloC
 import pretty.doc.birecursive.birecursive
+import pretty.docf.functor.functor
 import pretty.simpledoc.birecursive.birecursive
 import kotlin.math.max
 import kotlin.math.min
@@ -59,8 +63,6 @@ fun <A> Doc<A>.layoutWadlerLeijen(
                 })
         ) x else y()
 
-    // option marks fail and shorts everything
-    // TODO use cataM and eval? that is problemativ
     this@layoutWadlerLeijen.cata<(n: Int, k: Int, i: Int, nextEl: (nextN: Int, nextK: Int, nextI: Int) -> Option<SimpleDoc<A>>) -> Option<SimpleDoc<A>>> {
         { n, k, i, next ->
             when (val dF = it.fix()) {
