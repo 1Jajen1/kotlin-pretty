@@ -2,11 +2,12 @@ package pretty
 
 import arrow.Kind
 import arrow.Kind2
+import arrow.core.Tuple2
 import arrow.extension
-import arrow.recursion.hylo
 import arrow.recursion.typeclasses.Birecursive
 import arrow.syntax.function.andThen
 import arrow.typeclasses.*
+import pretty.doc.birecursive.birecursive
 import pretty.doc.semigroup.semigroup
 import pretty.docf.functor.functor
 
@@ -28,7 +29,7 @@ sealed class DocF<A, F> : DocFOf<A, F> {
     data class Nesting<A, F>(val doc: (Int) -> F) : DocF<A, F>()
     data class FlatAlt<A, F>(val l: F, val r: F) : DocF<A, F>()
     data class Annotated<A, F>(val ann: A, val doc: F) : DocF<A, F>()
-    data class WithPageWidth<A, F>(val doc: (PageWidth) -> F): DocF<A, F>()
+    data class WithPageWidth<A, F>(val doc: (PageWidth) -> F) : DocF<A, F>()
 
     fun <B> map(f: (F) -> B): DocF<A, B> = when (this) {
         is Nil -> Nil()
@@ -56,20 +57,21 @@ interface DocFFunctor<ANN> : Functor<DocFPartialOf<ANN>> {
 
 @extension
 interface DocFBifunctor : Bifunctor<ForDocF> {
-    override fun <A, B, C, D> Kind2<ForDocF, A, B>.bimap(fl: (A) -> C, fr: (B) -> D): Kind2<ForDocF, C, D> = when (val dF = fix()) {
-        is DocF.Nil -> DocF.Nil()
-        is DocF.Fail -> DocF.Fail()
-        is DocF.Text -> DocF.Text(dF.str)
-        is DocF.Line -> DocF.Line()
-        is DocF.Combined -> DocF.Combined(fr(dF.l), fr(dF.r))
-        is DocF.Nest -> DocF.Nest(dF.i, fr(dF.doc))
-        is DocF.Column -> DocF.Column(dF.doc andThen fr)
-        is DocF.Nesting -> DocF.Nesting(dF.doc andThen fr)
-        is DocF.Union -> DocF.Union(fr(dF.l), fr(dF.r))
-        is DocF.FlatAlt -> DocF.FlatAlt(fr(dF.l), fr(dF.r))
-        is DocF.Annotated -> DocF.Annotated(fl(dF.ann), fr(dF.doc))
-        is DocF.WithPageWidth -> DocF.WithPageWidth(dF.doc andThen fr)
-    }
+    override fun <A, B, C, D> Kind2<ForDocF, A, B>.bimap(fl: (A) -> C, fr: (B) -> D): Kind2<ForDocF, C, D> =
+        when (val dF = fix()) {
+            is DocF.Nil -> DocF.Nil()
+            is DocF.Fail -> DocF.Fail()
+            is DocF.Text -> DocF.Text(dF.str)
+            is DocF.Line -> DocF.Line()
+            is DocF.Combined -> DocF.Combined(fr(dF.l), fr(dF.r))
+            is DocF.Nest -> DocF.Nest(dF.i, fr(dF.doc))
+            is DocF.Column -> DocF.Column(dF.doc andThen fr)
+            is DocF.Nesting -> DocF.Nesting(dF.doc andThen fr)
+            is DocF.Union -> DocF.Union(fr(dF.l), fr(dF.r))
+            is DocF.FlatAlt -> DocF.FlatAlt(fr(dF.l), fr(dF.r))
+            is DocF.Annotated -> DocF.Annotated(fl(dF.ann), fr(dF.doc))
+            is DocF.WithPageWidth -> DocF.WithPageWidth(dF.doc andThen fr)
+        }
 }
 
 class ForDoc private constructor()
@@ -88,15 +90,14 @@ data class Doc<A>(val unDoc: DocF<A, Doc<A>>) : DocOf<A> {
 
 @extension
 interface DocFunctor : Functor<ForDoc> {
-    override fun <A, B> Kind<ForDoc, A>.map(f: (A) -> B): Kind<ForDoc, B> =
-        fix().hylo({
-            when (val dF = it.fix()) {
-                is DocF.Annotated -> Doc(DocF.Annotated(f(dF.ann), dF.doc.fix()))
-                else -> Doc(it.fix() as DocF<B, Doc<B>>)
-                // This is not unsafe because hylo traversed all Annotated already and
-                //  all remaining patterns have A as a phantom param so this is a retag
-            }
-        }, { it.unDoc }, DocF.functor())
+    override fun <A, B> Kind<ForDoc, A>.map(f: (A) -> B): Kind<ForDoc, B> = fix().cata {
+        when (it) {
+            is DocF.Annotated -> Doc(DocF.Annotated(f(it.ann), it.doc.fix()))
+            else -> Doc(it.fix() as DocF<B, Doc<B>>)
+            // This is not unsafe because hylo traversed all Annotated already and
+            //  all remaining patterns have A as a phantom param so this is a retag
+        }
+    }
 }
 
 @extension
@@ -119,4 +120,12 @@ interface DocMonoid<A> : Monoid<Doc<A>>, DocSemigroup<A> {
 @extension
 interface DocShow<A> : Show<Doc<A>> {
     override fun Doc<A>.show(): String = renderPretty().renderString()
+}
+
+fun <A, B> Doc<A>.cata(f: (DocF<A, B>) -> B): B = Doc.birecursive<A>().run {
+    cata { f(it.fix()) }
+}
+
+fun <A, B> Doc<A>.para(f: (DocF<A, Tuple2<Doc<A>, B>>) -> B): B = Doc.birecursive<A>().run {
+    para { f(it.fix()) }
 }

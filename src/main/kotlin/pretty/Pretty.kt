@@ -5,14 +5,13 @@ import arrow.core.extensions.list.foldable.foldRight
 import arrow.core.extensions.list.functor.tupleLeft
 import arrow.core.toT
 import arrow.syntax.collections.tail
-import pretty.doc.birecursive.birecursive
 import pretty.doc.functor.functor
 import pretty.doc.monoid.monoid
-import pretty.docf.functor.map
 
 fun <A> Doc<A>.renderPretty(): SimpleDoc<A> = layoutPretty(PageWidth.Available(80, 0.4F))
 
-fun <A> Doc<A>.pretty(maxWidth: Int, ribbonWidth: Float): String = layoutPretty(PageWidth.Available(maxWidth, ribbonWidth)).renderString()
+fun <A> Doc<A>.pretty(maxWidth: Int, ribbonWidth: Float): String =
+    layoutPretty(PageWidth.Available(maxWidth, ribbonWidth)).renderString()
 
 // primitives
 fun <A> nil(): Doc<A> = Doc.monoid<A>().empty()
@@ -45,16 +44,18 @@ fun <A, B> Doc<A>.reAnnotate(f: (A) -> B): Doc<B> = Doc.functor().run {
     map(f).fix()
 }
 
-fun <A, B> Doc<A>.alterAnnotations(f: (A) -> List<B>): Doc<B> = Doc.birecursive<A>().run {
-    cata {
-        when (val dF = it.fix()) {
-            is DocF.Annotated -> f(dF.ann).foldRight(Eval.now(dF.doc)) { a, acc ->
-                acc.map { Doc(DocF.Annotated(a, it)) }
-            }.value()
-            else -> Doc(it as DocF<B, Doc<B>>) // should be a safe cast
-        }
+fun <A, B> Doc<A>.alterAnnotations(f: (A) -> List<B>): Doc<B> = cata {
+    when (it) {
+        is DocF.Annotated -> f(it.ann).foldRight(Eval.now(it.doc)) { a, acc ->
+            acc.map { Doc(DocF.Annotated(a, it)) }
+        }.value()
+        else -> Doc(it as DocF<B, Doc<B>>)
+        // should be a safe cast because cata already transformed everything but annotations up to this level
+        //  and everything but annotations has A as a phantom generic
     }
 }
+
+fun <A> Doc<A>.unAnnotate(): Doc<Nothing> = alterAnnotations { emptyList<Nothing>() }
 
 // combinators
 fun <A> Doc<A>.fillBreak(i: Int): Doc<A> = width { w ->
@@ -76,14 +77,12 @@ fun <A> Doc<A>.align(): Doc<A> = column { k ->
     nesting { i -> this.nest(k - i) }
 }
 
-fun <A> Doc<A>.flatten(): Doc<A> = Doc.birecursive<A>().run {
-    para {
-        // This is why I love recursion schemes!
-        when (val dF = it.fix()) {
-            is DocF.Union -> dF.l.b // left side of union is already flattened
-            is DocF.FlatAlt -> dF.r.a // alternative, using the extra argument from para which is not yet folded
-            else -> Doc(it.map { it.b })
-        }
+fun <A> Doc<A>.flatten(): Doc<A> = para {
+    // This is why I love recursion schemes!
+    when (it) {
+        is DocF.Union -> it.l.b // left side of union is already flattened
+        is DocF.FlatAlt -> it.r.a // alternative, using the extra argument from para which is not yet folded
+        else -> Doc(it.map { it.b }) // Ignore all other cases and just take the folded result
     }
 }
 
@@ -103,11 +102,13 @@ fun <A> List<Doc<A>>.list(): Doc<A> = encloseSep(
     (rBracket<A>() + space()).flatAlt(rBracket()),
     comma<A>() + space()
 ).group()
+
 fun <A> List<Doc<A>>.tupled(): Doc<A> = encloseSep(
     (lParen<A>() + space()).flatAlt(lParen()),
     (rParen<A>() + space()).flatAlt(rParen()),
     comma<A>() + space()
 ).group()
+
 fun <A> List<Doc<A>>.semiBraces(): Doc<A> = encloseSep(
     (lBrace<A>() + space()).flatAlt(lBrace()),
     (rBrace<A>() + space()).flatAlt(rBrace()),

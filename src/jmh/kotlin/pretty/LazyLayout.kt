@@ -26,4 +26,6 @@ class LazyLayout {
     fun lazyTraversal(): SimpleDoc<Nothing> {
         return largeDoc.renderPrettyLazy()
     }
+
+    // TODO benchmark non-cata code from the test
 }
