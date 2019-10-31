@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-    implementation "kotlin-pretty:kotlin-pretty:0.3.2"
+    implementation "kotlin-pretty:kotlin-pretty:0.3.4"
 }
 ```
 
