@@ -178,7 +178,7 @@ fun <A> String.doc(): Doc<A> = when {
     isEmpty() -> nil()
     else -> takeWhile { it != '\n' }.let { fst ->
         if (fst.length >= length) fst.text()
-        else fst.text<A>() + line() + substring(fst.length + 1).doc()
+        else fst.text<A>() + hardLine() + substring(fst.length + 1).doc()
     }
 }
 
