@@ -2,10 +2,7 @@ package pretty
 
 import arrow.Kind
 import arrow.Kind2
-import arrow.core.AndThen
-import arrow.core.Eval
-import arrow.core.ForFunction0
-import arrow.core.Tuple2
+import arrow.core.*
 import arrow.extension
 import arrow.free.*
 import arrow.free.extensions.free.functor.functor
@@ -159,13 +156,25 @@ private fun <C>cheatyTraverse() = object: Traverse<DocFPartialOf<C>> {
             is DocF.FlatAlt -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.FlatAlt<C, B>(l, r) }
             // bs code that will only work with Free
             is DocF.Column -> Trampoline.later {
-                DocF.Column<C, B>(AndThen(dF.doc).andThen { (f(it) as Kind<FreePartialOf<ForFunction0>, B>).fix().runT() })
+                DocF.Column<C, B>(AndThen(dF.doc).andThen {
+                    val res = f(it)
+                    if (res is Id<B>) res.extract()
+                    else (res as Kind<FreePartialOf<ForFunction0>, B>).fix().runT()
+                })
             } as Kind<G, Kind<DocFPartialOf<C>, B>>
             is DocF.Nesting -> Trampoline.later {
-                DocF.Nesting<C, B>(AndThen(dF.doc).andThen { (f(it) as Kind<FreePartialOf<ForFunction0>, B>).fix().runT() })
+                DocF.Nesting<C, B>(AndThen(dF.doc).andThen {
+                    val res = f(it)
+                    if (res is Id<B>) res.extract()
+                    else (res as Kind<FreePartialOf<ForFunction0>, B>).fix().runT()
+                })
             } as Kind<G, Kind<DocFPartialOf<C>, B>>
             is DocF.WithPageWidth -> Trampoline.later {
-                DocF.WithPageWidth<C, B>(AndThen(dF.doc).andThen { (f(it) as Kind<FreePartialOf<ForFunction0>, B>).fix().runT() })
+                DocF.WithPageWidth<C, B>(AndThen(dF.doc).andThen {
+                    val res = f(it)
+                    if (res is Id<B>) res.extract()
+                    else (res as Kind<FreePartialOf<ForFunction0>, B>).fix().runT()
+                })
             } as Kind<G, Kind<DocFPartialOf<C>, B>>
         }
     }
