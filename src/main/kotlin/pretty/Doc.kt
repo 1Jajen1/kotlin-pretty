@@ -5,13 +5,8 @@ import arrow.Kind2
 import arrow.core.*
 import arrow.extension
 import arrow.free.*
-import arrow.free.extensions.free.functor.functor
 import arrow.free.extensions.free.monad.monad
-import arrow.mtl.typeclasses.ComposedFunctor
-import arrow.mtl.typeclasses.Nested
-import arrow.mtl.typeclasses.unnest
 import arrow.recursion.typeclasses.Birecursive
-import arrow.syntax.function.andThen
 import arrow.typeclasses.*
 import pretty.doc.birecursive.birecursive
 import pretty.doc.semigroup.semigroup
@@ -132,7 +127,7 @@ interface DocShow<A> : Show<Doc<A>> {
 //  to make it stacksafe. This needs a Traverse impl for DocF which is not possible, but using
 //  AndThen + a cheaty traverse implementation it could work.
 // This will only ever work with Free<ForFunction0>, do not use it anywhere else
-private fun <C>cheatyTraverse() = object: Traverse<DocFPartialOf<C>> {
+private fun <C> cheatyTraverse() = object : Traverse<DocFPartialOf<C>> {
     override fun <A, B> Kind<DocFPartialOf<C>, A>.foldLeft(b: B, f: (B, A) -> B): B = TODO()
     override fun <A, B> Kind<DocFPartialOf<C>, A>.foldRight(lb: Eval<B>, f: (A, Eval<B>) -> Eval<B>): Eval<B> = TODO()
 
@@ -144,39 +139,55 @@ private fun <C>cheatyTraverse() = object: Traverse<DocFPartialOf<C>> {
         AP: Applicative<G>,
         f: (A) -> Kind<G, B>
     ): Kind<G, Kind<DocFPartialOf<C>, B>> = AP.run {
-        when (val dF = fix()) {
-            is DocF.Fail -> just(DocF.Fail())
-            is DocF.Nil -> just(DocF.Nil())
-            is DocF.Line -> just(DocF.Line())
-            is DocF.Text -> just(DocF.Text(dF.str))
-            is DocF.Nest -> f(dF.doc).map { DocF.Nest<C, B>(dF.i, it) }
-            is DocF.Combined -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.Combined<C, B>(l, r) }
-            is DocF.Annotated -> f(dF.doc).map { DocF.Annotated(dF.ann, it) }
-            is DocF.Union -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.Union<C, B>(l, r) }
-            is DocF.FlatAlt -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.FlatAlt<C, B>(l, r) }
-            // bs code that will only work with Free
-            is DocF.Column -> Trampoline.later {
-                DocF.Column<C, B>(AndThen(dF.doc).andThen {
-                    val res = f(it)
-                    if (res is Id<B>) res.extract()
-                    else (res as Kind<FreePartialOf<ForFunction0>, B>).fix().runT()
-                })
-            } as Kind<G, Kind<DocFPartialOf<C>, B>>
-            is DocF.Nesting -> Trampoline.later {
-                DocF.Nesting<C, B>(AndThen(dF.doc).andThen {
-                    val res = f(it)
-                    if (res is Id<B>) res.extract()
-                    else (res as Kind<FreePartialOf<ForFunction0>, B>).fix().runT()
-                })
-            } as Kind<G, Kind<DocFPartialOf<C>, B>>
-            is DocF.WithPageWidth -> Trampoline.later {
-                DocF.WithPageWidth<C, B>(AndThen(dF.doc).andThen {
-                    val res = f(it)
-                    if (res is Id<B>) res.extract()
-                    else (res as Kind<FreePartialOf<ForFunction0>, B>).fix().runT()
-                })
-            } as Kind<G, Kind<DocFPartialOf<C>, B>>
-        }
+        val isId = just(0) == Id(0)
+        if (isId)
+            when (val dF = fix()) {
+                is DocF.Fail -> just(DocF.Fail())
+                is DocF.Nil -> just(DocF.Nil())
+                is DocF.Line -> just(DocF.Line())
+                is DocF.Text -> just(DocF.Text(dF.str))
+                is DocF.Nest -> f(dF.doc).map { DocF.Nest<C, B>(dF.i, it) }
+                is DocF.Combined -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.Combined<C, B>(l, r) }
+                is DocF.Annotated -> f(dF.doc).map { DocF.Annotated(dF.ann, it) }
+                is DocF.Union -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.Union<C, B>(l, r) }
+                is DocF.FlatAlt -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.FlatAlt<C, B>(l, r) }
+                is DocF.Column -> Id(DocF.Column<C, B>(AndThen(dF.doc).andThen {
+                    (f(it) as Id<B>).extract()
+                })) as Kind<G, DocF<C, B>>
+                is DocF.Nesting -> Id(DocF.Nesting<C, B>(AndThen(dF.doc).andThen {
+                    (f(it) as Id<B>).extract()
+                })) as Kind<G, DocF<C, B>>
+                is DocF.WithPageWidth -> Id(DocF.WithPageWidth<C, B>(AndThen(dF.doc).andThen {
+                    (f(it) as Id<B>).extract()
+                })) as Kind<G, DocF<C, B>>
+            }
+        else
+            when (val dF = fix()) {
+                is DocF.Fail -> just(DocF.Fail())
+                is DocF.Nil -> just(DocF.Nil())
+                is DocF.Line -> just(DocF.Line())
+                is DocF.Text -> just(DocF.Text(dF.str))
+                is DocF.Nest -> f(dF.doc).map { DocF.Nest<C, B>(dF.i, it) }
+                is DocF.Combined -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.Combined<C, B>(l, r) }
+                is DocF.Annotated -> f(dF.doc).map { DocF.Annotated(dF.ann, it) }
+                is DocF.Union -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.Union<C, B>(l, r) }
+                is DocF.FlatAlt -> map(f(dF.l), f(dF.r)) { (l, r) -> DocF.FlatAlt<C, B>(l, r) }
+                is DocF.Column -> Trampoline.later {
+                    DocF.Column<C, B>(AndThen(dF.doc).andThen {
+                        (f(it) as TrampolineF<B>).fix().runT()
+                    })
+                } as Kind<G, DocF<C, B>>
+                is DocF.Nesting -> Trampoline.later {
+                    DocF.Nesting<C, B>(AndThen(dF.doc).andThen {
+                        (f(it) as TrampolineF<B>).fix().runT()
+                    })
+                } as Kind<G, DocF<C, B>>
+                is DocF.WithPageWidth -> Trampoline.later {
+                    DocF.WithPageWidth<C, B>(AndThen(dF.doc).andThen {
+                        (f(it) as TrampolineF<B>).fix().runT()
+                    })
+                } as Kind<G, DocF<C, B>>
+            }
     }
 }
 
