@@ -2,16 +2,18 @@ package pretty
 
 import arrow.Kind
 import arrow.Kind2
+import arrow.core.Eval
+import arrow.core.ForFunction0
 import arrow.core.Tuple2
 import arrow.extension
+import arrow.free.*
+import arrow.free.extensions.free.monad.monad
 import arrow.recursion.typeclasses.Birecursive
 import arrow.syntax.collections.tail
-import arrow.typeclasses.Bifunctor
-import arrow.typeclasses.Eq
-import arrow.typeclasses.Functor
-import arrow.typeclasses.Show
+import arrow.typeclasses.*
 import pretty.simpledoc.birecursive.birecursive
 import pretty.simpledocf.functor.functor
+import pretty.simpledocf.traverse.traverse
 
 class ForSimpleDocF private constructor()
 typealias SimpleDocFOf<A, F> = Kind<SimpleDocFPartialOf<A>, F>
@@ -41,6 +43,43 @@ interface SimpleDocFFunctor<C> : Functor<SimpleDocFPartialOf<C>> {
             is SimpleDocF.AddAnnotation -> SimpleDocF.AddAnnotation(dF.ann, f(dF.doc))
             is SimpleDocF.RemoveAnnotation -> SimpleDocF.RemoveAnnotation(f(dF.doc))
         }
+}
+
+@extension
+interface SimpleDocFTraverse<C> : Traverse<SimpleDocFPartialOf<C>> {
+    override fun <A, B> Kind<SimpleDocFPartialOf<C>, A>.foldLeft(b: B, f: (B, A) -> B): B =
+        when (val it = fix()) {
+            is SimpleDocF.Fail -> b
+            is SimpleDocF.Nil -> b
+            is SimpleDocF.Line -> f(b, it.doc)
+            is SimpleDocF.Text -> f(b, it.doc)
+            is SimpleDocF.AddAnnotation -> f(b, it.doc)
+            is SimpleDocF.RemoveAnnotation -> f(b, it.doc)
+        }
+
+    override fun <A, B> Kind<SimpleDocFPartialOf<C>, A>.foldRight(lb: Eval<B>, f: (A, Eval<B>) -> Eval<B>): Eval<B> =
+        when (val it = fix()) {
+            is SimpleDocF.Fail -> lb
+            is SimpleDocF.Nil -> lb
+            is SimpleDocF.Line -> f(it.doc, lb)
+            is SimpleDocF.Text -> f(it.doc, lb)
+            is SimpleDocF.AddAnnotation -> f(it.doc, lb)
+            is SimpleDocF.RemoveAnnotation -> f(it.doc, lb)
+        }
+
+    override fun <G, A, B> Kind<SimpleDocFPartialOf<C>, A>.traverse(
+        AP: Applicative<G>,
+        f: (A) -> Kind<G, B>
+    ): Kind<G, Kind<SimpleDocFPartialOf<C>, B>> = AP.run {
+        when (val it = fix()) {
+            is SimpleDocF.Fail -> just(SimpleDocF.Fail())
+            is SimpleDocF.Nil -> just(SimpleDocF.Nil())
+            is SimpleDocF.Line -> f(it.doc).map { b -> SimpleDocF.Line<C, B>(it.i, b) }
+            is SimpleDocF.Text -> f(it.doc).map { b -> SimpleDocF.Text<C, B>(it.str, b) }
+            is SimpleDocF.AddAnnotation -> f(it.doc).map { b -> SimpleDocF.AddAnnotation(it.ann, b) }
+            is SimpleDocF.RemoveAnnotation -> f(it.doc).map { b -> SimpleDocF.RemoveAnnotation<C, B>(b) }
+        }
+    }
 }
 
 @extension
@@ -130,7 +169,7 @@ fun <A> SimpleDoc<A>.renderString(): String = cata {
 
 
 fun <A, B> SimpleDoc<A>.cata(f: (SimpleDocF<A, B>) -> B): B = SimpleDoc.birecursive<A>().run {
-    cata { f(it.fix()) }
+    cataM<FreePartialOf<ForFunction0>, B>(SimpleDocF.traverse(), Free.monad()) { Trampoline.later { f(it.fix()) } }.fix().runT()
 }
 
 fun <A, B> SimpleDoc<A>.renderDecorated(
@@ -138,22 +177,24 @@ fun <A, B> SimpleDoc<A>.renderDecorated(
     text: (String) -> B,
     addAnnotation: (A) -> B,
     removeAnnotation: (A) -> B
-): B = cata<A, (List<A>) -> B> {
+): B = cata<A, (List<A>) -> TrampolineF<B>> {
     { annotations ->
-        when (it) {
-            is SimpleDocF.AddAnnotation -> combine(addAnnotation(it.ann), it.doc(listOf(it.ann) + annotations))
-            is SimpleDocF.RemoveAnnotation -> when {
-                annotations.isEmpty() -> throw IllegalStateException("Encountered remove annotation without an annotation.")
-                else -> combine(removeAnnotation(annotations.first()), it.doc(annotations.tail()))
+        Trampoline.defer {
+            when (it) {
+                is SimpleDocF.AddAnnotation -> it.doc(listOf(it.ann) + annotations).map { rec -> combine(addAnnotation(it.ann), rec) }
+                is SimpleDocF.RemoveAnnotation -> when {
+                    annotations.isEmpty() -> throw IllegalStateException("Encountered remove annotation without an annotation.")
+                    else -> it.doc(annotations.tail()).map { rec -> combine(removeAnnotation(annotations.first()), rec) }
+                }
+                is SimpleDocF.Line -> it.doc(annotations).map { rec -> combine(text("\n" + spaces(it.i)), rec) }
+                is SimpleDocF.Text -> it.doc(annotations).map { rec -> combine(text(it.str), rec) }
+                is SimpleDocF.Nil -> Free.just(text(""))
+                is SimpleDocF.Fail -> throw IllegalStateException("Encountered Fail. This is a bug in the layout function used to generate the SimpleDoc.")
             }
-            is SimpleDocF.Line -> combine(text("\n" + spaces(it.i)), it.doc(annotations))
-            is SimpleDocF.Text -> combine(text(it.str), it.doc(annotations))
-            is SimpleDocF.Nil -> text("")
-            is SimpleDocF.Fail -> throw IllegalStateException("Encountered Fail. This is a bug in the layout function used to generate the SimpleDoc.")
         }
     }
-}(emptyList())
+}(emptyList()).runT()
 
 fun <A, B> SimpleDoc<A>.para(f: (SimpleDocF<A, Tuple2<SimpleDoc<A>, B>>) -> B): B = SimpleDoc.birecursive<A>().run {
-    para { f(it.fix()) }
+    paraM<FreePartialOf<ForFunction0>, B>(SimpleDocF.traverse(), Free.monad()) { Trampoline.later { f(it.fix()) } }.fix().runT()
 }
