@@ -102,6 +102,17 @@ inline fun <A> SimpleDocOf<A>.fix(): SimpleDoc<A> = this as SimpleDoc<A>
 
 data class SimpleDoc<A>(val unDoc: SimpleDocF<A, SimpleDoc<A>>) : SimpleDocOf<A> {
 
+    operator fun plus(b: SimpleDoc<A>): SimpleDoc<A> = cata {
+        when (it) {
+            is SimpleDocF.Nil -> b
+            is SimpleDocF.Text -> when (val rdF = it.doc.unDoc) {
+                is SimpleDocF.Text -> text(it.str + rdF.str, rdF.doc)
+                else -> SimpleDoc(it)
+            }
+            else -> SimpleDoc(it)
+        }
+    }
+
     companion object {
         fun <A> nil(): SimpleDoc<A> = SimpleDoc(SimpleDocF.Nil())
         fun <A> text(str: String, next: SimpleDoc<A>): SimpleDoc<A> = SimpleDoc(SimpleDocF.Text(str, next))

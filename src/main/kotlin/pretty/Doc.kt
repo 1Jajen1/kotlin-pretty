@@ -110,7 +110,13 @@ interface DocBirecursive<A> : Birecursive<Doc<A>, DocFPartialOf<A>> {
 
 @extension
 interface DocSemigroup<A> : Semigroup<Doc<A>> {
-    override fun Doc<A>.combine(b: Doc<A>): Doc<A> = Doc(DocF.Combined(this, b))
+    override fun Doc<A>.combine(b: Doc<A>): Doc<A> = when (val ldF = this.unDoc) {
+        is DocF.Text -> when (val rdF = b.unDoc) {
+            is DocF.Text -> Doc(DocF.Text(ldF.str + rdF.str))
+            else -> Doc(DocF.Combined(this, b))
+        }
+        else -> Doc(DocF.Combined(this, b))
+    }
 }
 
 @extension
