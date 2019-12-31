@@ -89,7 +89,12 @@ fun <A> Doc<A>.layoutWadlerLeijen(
                 when (val dF = it) {
                     is DocF.Nil -> next(n, k, i)
                     is DocF.Text ->
-                        next(n, k + dF.str.length, i).fix().map { it.map { SimpleDoc.text(dF.str, it) } }
+                        next(n, k + dF.str.length, i).fix().map { it.map {
+                            when (val rdF = it.unDoc) {
+                                is SimpleDocF.Text -> SimpleDoc.text(dF.str + rdF.str, rdF.doc)
+                                else -> SimpleDoc.text(dF.str, it)
+                            }
+                        } }
                     is DocF.Combined ->
                         dF.l(n, k, i) { a, b, _ -> Trampoline.defer { dF.r(a, b, i, next) } }
                     is DocF.Union ->

@@ -25,7 +25,7 @@ class LayoutTest : PropertySpec({
                     Eval.later {
                         d.layoutPretty(pw)
                             .eqv(
-                                d.best(pw),
+                                d.best(pw).fuseText(),
                                 Eq { a, b ->
                                     when (a.unDoc) {
                                         is SimpleDocF.Fail -> b.hasFailure()
@@ -39,6 +39,16 @@ class LayoutTest : PropertySpec({
         }
     }
 })
+
+fun <A> SimpleDoc<A>.fuseText(): SimpleDoc<A> = cata {
+    when (it) {
+        is SimpleDocF.Text -> when (val dF = it.doc.unDoc) {
+            is SimpleDocF.Text -> SimpleDoc.text(it.str + dF.str, dF.doc)
+            else -> SimpleDoc(it)
+        }
+        else -> SimpleDoc(it)
+    }
+}
 
 // This is kept to verify against the current one (this one is almost the same as prettyPrinter's)
 // this was the function used before the recursion scheme change
