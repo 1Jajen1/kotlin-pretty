@@ -35,7 +35,7 @@ apply plugin: "com.github.johnrengelman.shadow"
 apply plugin: 'me.champeau.gradle.jmh'
 
 group 'kotlin-pretty'
-version '0.3.10'
+version '0.3.11'
 
 def arrow_version = "0.10.5-SNAPSHOT"
 dependencies {
@@ -115,7 +115,7 @@ publishing {
             }
             groupId 'kotlin-pretty'
             artifactId 'kotlin-pretty'
-            version '0.3.10'
+            version '0.3.11'
             pom.withXml {
                 def root = asNode()
                 root.appendNode('description', 'Kotlin pretty printer implementation')
@@ -138,7 +138,7 @@ bintray {
         licenses = ['BSD-3']
         vcsUrl = 'https://github.com/1Jajen1/kotlin-pretty'
         version {
-            name = '0.3.10'
+            name = '0.3.11'
             released  = new Date()
         }
     }

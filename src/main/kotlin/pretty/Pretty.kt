@@ -1,12 +1,16 @@
 package pretty
 
-import arrow.core.Eval
+import arrow.core.*
 import arrow.core.extensions.list.foldable.foldRight
 import arrow.core.extensions.list.functor.tupleLeft
-import arrow.core.toT
+import arrow.recursion.coelgot
+import arrow.recursion.coelgotM
+import arrow.recursion.elgot
 import arrow.syntax.collections.tail
 import pretty.doc.functor.functor
+import pretty.doc.functor.map
 import pretty.doc.monoid.monoid
+import pretty.docf.functor.functor
 
 fun <A> Doc<A>.renderPretty(): SimpleDoc<A> = layoutPretty(PageWidth.Available(80, 0.4F))
 
@@ -14,31 +18,33 @@ fun <A> Doc<A>.pretty(maxWidth: Int, ribbonWidth: Float): String =
     layoutPretty(PageWidth.Available(maxWidth, ribbonWidth)).renderString()
 
 // primitives
-fun <A> nil(): Doc<A> = Doc.monoid<A>().empty()
+fun nil(): Doc<Nothing> = Doc(Eval.now(DocF.Nil))
 
-fun <A> String.text(): Doc<A> = Doc<A>(DocF.Text(this))
+fun String.text(): Doc<Nothing> = Doc(Eval.now(DocF.Text(this)))
 
-fun <A> line(): Doc<A> = hardLine<A>().flatAlt(" ".text())
+fun line(): Doc<Nothing> = hardLine().flatAlt(" ".text())
 
-fun <A> lineBreak(): Doc<A> = hardLine<A>().flatAlt(nil())
+fun lineBreak(): Doc<Nothing> = hardLine().flatAlt(nil())
 
-fun <A> softLine(): Doc<A> = line<A>().group()
+fun softLine(): Doc<Nothing> = line().group()
 
-fun <A> softLineBreak(): Doc<A> = lineBreak<A>().group()
+fun softLineBreak(): Doc<Nothing> = lineBreak().group()
 
-fun <A> hardLine(): Doc<A> = Doc(DocF.Line())
+fun hardLine(): Doc<Nothing> = Doc(Eval.now(DocF.Line))
 
-fun <A> Doc<A>.nest(i: Int): Doc<A> = Doc<A>(DocF.Nest(i, this))
+fun <A> Doc<A>.nest(i: Int): Doc<A> = Doc(Eval.now(DocF.Nest(i, this)))
 
-fun <A> Doc<A>.group(): Doc<A> = Doc<A>(DocF.Union(this.flatten(), this))
+fun <A> Doc<A>.group(): Doc<A> = changesUponFlattening().fold({ this }, {
+    Doc(Eval.now(DocF.Union(it, this@group)))
+})
 
-fun <A> column(f: (Int) -> Doc<A>): Doc<A> = Doc<A>(DocF.Column(f))
+fun <A> column(f: (Int) -> Doc<A>): Doc<A> = Doc(Eval.now(DocF.Column(f)))
 
-fun <A> nesting(f: (Int) -> Doc<A>): Doc<A> = Doc<A>(DocF.Nesting(f))
+fun <A> nesting(f: (Int) -> Doc<A>): Doc<A> = Doc(Eval.now(DocF.Nesting(f)))
 
-fun <A> Doc<A>.flatAlt(other: Doc<A>): Doc<A> = Doc<A>(DocF.FlatAlt(this, other))
+fun <A> Doc<A>.flatAlt(other: Doc<A>): Doc<A> = Doc(Eval.now(DocF.FlatAlt(this, other)))
 
-fun <A> Doc<A>.annotate(ann: A): Doc<A> = Doc(DocF.Annotated(ann, this))
+fun <A> Doc<A>.annotate(ann: A): Doc<A> = Doc(Eval.now(DocF.Annotated(ann, this)))
 
 fun <A, B> Doc<A>.reAnnotate(f: (A) -> B): Doc<B> = Doc.functor().run {
     map(f).fix()
@@ -46,10 +52,10 @@ fun <A, B> Doc<A>.reAnnotate(f: (A) -> B): Doc<B> = Doc.functor().run {
 
 fun <A, B> Doc<A>.alterAnnotations(f: (A) -> List<B>): Doc<B> = cata {
     when (it) {
-        is DocF.Annotated -> f(it.ann).foldRight(Eval.now(it.doc)) { a, acc ->
-            acc.map { Doc(DocF.Annotated(a, it)) }
-        }.value()
-        else -> Doc(it as DocF<B, Doc<B>>)
+        is DocF.Annotated -> f(it.ann).foldRight(it.doc.unDoc) { a, acc ->
+            acc.map { DocF.Annotated(a, Doc(Eval.now(it))) }
+        }.let(::Doc)
+        else -> Doc(Eval.now(it as DocF<B, Doc<B>>))
         // should be a safe cast because cata already transformed everything but annotations up to this level
         //  and everything but annotations has A as a phantom generic
     }
@@ -59,7 +65,7 @@ fun <A> Doc<A>.unAnnotate(): Doc<Nothing> = alterAnnotations { emptyList<Nothing
 
 // combinators
 fun <A> Doc<A>.fillBreak(i: Int): Doc<A> = width { w ->
-    if (w > i) lineBreak<A>().nest(i) else spaces(i - w).text()
+    if (w > i) lineBreak().nest(i) else spaces(i - w).text()
 }
 
 fun <A> Doc<A>.fill(i: Int): Doc<A> = width { w ->
@@ -69,7 +75,7 @@ fun <A> Doc<A>.fill(i: Int): Doc<A> = width { w ->
 
 fun <A> Doc<A>.width(f: (Int) -> Doc<A>): Doc<A> = column { k1 -> this + column { k2 -> f(k2 - k1) } }
 
-fun <A> Doc<A>.indent(i: Int): Doc<A> = (spaces(i).text<A>() + this).hang(i)
+fun <A> Doc<A>.indent(i: Int): Doc<A> = (spaces(i).text() + this).hang(i)
 
 fun <A> Doc<A>.hang(i: Int): Doc<A> = nest(i).align()
 
@@ -77,14 +83,29 @@ fun <A> Doc<A>.align(): Doc<A> = column { k ->
     nesting { i -> this.nest(k - i) }
 }
 
-fun <A> Doc<A>.flatten(): Doc<A> = para {
-    // This is why I love recursion schemes!
+fun <A> Doc<A>.flatten(): Doc<A> = Doc(Eval.later {
+    when (val dF = unDoc.value()) {
+        is DocF.FlatAlt -> dF.r.flatten().unDoc.value()
+        is DocF.Union -> dF.l.flatten().unDoc.value()
+        is DocF.Line -> DocF.Fail
+        is DocF.Annotated -> DocF.Annotated(dF.ann, dF.doc.flatten())
+        is DocF.Combined -> DocF.Combined(dF.l.flatten(), dF.r.flatten())
+        is DocF.Nest -> DocF.Nest(dF.i, dF.doc.flatten())
+        is DocF.Column -> DocF.Column(AndThen(dF.doc).andThen { it.flatten() })
+        is DocF.Nesting -> DocF.Nesting(AndThen(dF.doc).andThen { it.flatten() })
+        is DocF.WithPageWidth -> DocF.WithPageWidth(AndThen(dF.doc).andThen { it.flatten() })
+        else -> dF
+    }
+})
+
+/* para {
     when (it) {
         is DocF.Union -> it.l.b // left side of union is already flattened
-        is DocF.FlatAlt -> it.r.a // alternative, using the extra argument from para which is not yet folded
-        else -> Doc(it.map { it.b }) // Ignore all other cases and just take the folded result
+        is DocF.FlatAlt -> it.r.b // flattened right side
+        is DocF.Line -> Doc(Eval.now(DocF.Fail))
+        else -> Doc(Eval.now(it.map { it.b })) // Ignore all other cases and just take the folded result
     }
-}
+} */
 
 fun spaces(i: Int): String =
     if (i < 0) ""
@@ -98,21 +119,21 @@ infix fun <A> Doc<A>.lineBreak(d: Doc<A>): Doc<A> = this + lineBreak() + d
 infix fun <A> Doc<A>.softLineBreak(d: Doc<A>): Doc<A> = this + softLineBreak() + d
 
 fun <A> List<Doc<A>>.list(): Doc<A> = encloseSep(
-    (lBracket<A>() + space()).flatAlt(lBracket()),
-    (rBracket<A>() + space()).flatAlt(rBracket()),
-    comma<A>() + space()
+    (lBracket() + space()).flatAlt(lBracket()),
+    (rBracket() + space()).flatAlt(rBracket()),
+    comma() + space()
 ).group()
 
 fun <A> List<Doc<A>>.tupled(): Doc<A> = encloseSep(
-    (lParen<A>() + space()).flatAlt(lParen()),
-    (rParen<A>() + space()).flatAlt(rParen()),
-    comma<A>() + space()
+    (lParen() + space()).flatAlt(lParen()),
+    (rParen() + space()).flatAlt(rParen()),
+    comma() + space()
 ).group()
 
 fun <A> List<Doc<A>>.semiBraces(): Doc<A> = encloseSep(
-    (lBrace<A>() + space()).flatAlt(lBrace()),
-    (rBrace<A>() + space()).flatAlt(rBrace()),
-    comma<A>() + space()
+    (lBrace() + space()).flatAlt(lBrace()),
+    (rBrace() + space()).flatAlt(rBrace()),
+    comma() + space()
 ).group()
 
 fun <A> List<Doc<A>>.encloseSep(l: Doc<A>, r: Doc<A>, sep: Doc<A>): Doc<A> = when {
@@ -154,38 +175,38 @@ fun <A> Doc<A>.parens(): Doc<A> = enclose(lParen(), rParen())
 fun <A> Doc<A>.brackets(): Doc<A> = enclose(lBracket(), rBracket())
 fun <A> Doc<A>.angles(): Doc<A> = enclose(lAngle(), rAngle())
 
-fun <A> lBracket(): Doc<A> = "[".text()
-fun <A> rBracket(): Doc<A> = "]".text()
-fun <A> lParen(): Doc<A> = "(".text()
-fun <A> rParen(): Doc<A> = ")".text()
-fun <A> lBrace(): Doc<A> = "{".text()
-fun <A> rBrace(): Doc<A> = "}".text()
-fun <A> lAngle(): Doc<A> = "<".text()
-fun <A> rAngle(): Doc<A> = ">".text()
+fun lBracket(): Doc<Nothing> = "[".text()
+fun rBracket(): Doc<Nothing> = "]".text()
+fun lParen(): Doc<Nothing> = "(".text()
+fun rParen(): Doc<Nothing> = ")".text()
+fun lBrace(): Doc<Nothing> = "{".text()
+fun rBrace(): Doc<Nothing> = "}".text()
+fun lAngle(): Doc<Nothing> = "<".text()
+fun rAngle(): Doc<Nothing> = ">".text()
 
-fun <A> comma(): Doc<A> = ",".text()
-fun <A> space(): Doc<A> = " ".text()
-fun <A> sQuote(): Doc<A> = "\'".text()
-fun <A> dQuote(): Doc<A> = "\"".text()
-fun <A> semiColon(): Doc<A> = ";".text()
-fun <A> colon(): Doc<A> = ":".text()
-fun <A> dot(): Doc<A> = ".".text()
-fun <A> backslash(): Doc<A> = "\\".text()
-fun <A> equals(): Doc<A> = "=".text()
-fun <A> pipe(): Doc<A> = "|".text()
+fun comma(): Doc<Nothing> = ",".text()
+fun space(): Doc<Nothing> = " ".text()
+fun sQuote(): Doc<Nothing> = "\'".text()
+fun dQuote(): Doc<Nothing> = "\"".text()
+fun semiColon(): Doc<Nothing> = ";".text()
+fun colon(): Doc<Nothing> = ":".text()
+fun dot(): Doc<Nothing> = ".".text()
+fun backslash(): Doc<Nothing> = "\\".text()
+fun equals(): Doc<Nothing> = "=".text()
+fun pipe(): Doc<Nothing> = "|".text()
 
-fun <A> String.doc(): Doc<A> = when {
+fun String.doc(): Doc<Nothing> = when {
     isEmpty() -> nil()
     else -> takeWhile { it != '\n' }.let { fst ->
         if (fst.length >= length) fst.text()
-        else fst.text<A>() + hardLine() + substring(fst.length + 1).doc()
+        else fst.text() + hardLine() + substring(fst.length + 1).doc()
     }
 }
 
-fun <A> Boolean.doc(): Doc<A> = toString().text()
-fun <A> Byte.doc(): Doc<A> = toString().text()
-fun <A> Short.doc(): Doc<A> = toString().text()
-fun <A> Int.doc(): Doc<A> = toString().text()
-fun <A> Long.doc(): Doc<A> = toString().text()
-fun <A> Float.doc(): Doc<A> = toString().text()
-fun <A> Double.doc(): Doc<A> = toString().text()
+fun Boolean.doc(): Doc<Nothing> = toString().text()
+fun Byte.doc(): Doc<Nothing> = toString().text()
+fun Short.doc(): Doc<Nothing> = toString().text()
+fun Int.doc(): Doc<Nothing> = toString().text()
+fun Long.doc(): Doc<Nothing> = toString().text()
+fun Float.doc(): Doc<Nothing> = toString().text()
+fun Double.doc(): Doc<Nothing> = toString().text()

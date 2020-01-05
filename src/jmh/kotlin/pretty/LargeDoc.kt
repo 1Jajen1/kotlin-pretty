@@ -87,37 +87,37 @@ fun <A> Gen<A>.fromTo(i: Int, j: Int): Gen<A> = Gen.monad().fx.monad {
 
 fun Program.show(): Doc<Nothing> = unProgram.show()
 fun Binds.show(): Doc<Nothing> = unBinds.toList()
-    .map { (k, v) -> k.text<Nothing>() spaced equals() spaced v.show() }
+    .map { (k, v) -> k.text() spaced equals() spaced v.show() }
     .vSep()
     .align()
 
-fun LambdaForm.show(): Doc<Nothing> = "\\".text<Nothing>() +
-        (if (free.isEmpty()) nil() else lParen<Nothing>() + free.map { it.text<Nothing>() }.hSep() + rParen()) +
-        (if (bound.isEmpty()) nil() else (if (free.isEmpty()) bound.map { it.text<Nothing>() }.hSep() else space<Nothing>() + bound.map { it.text<Nothing>() }.hSep())) +
+fun LambdaForm.show(): Doc<Nothing> = "\\".text() +
+        (if (free.isEmpty()) nil() else lParen() + free.map { it.text() }.hSep() + rParen()) +
+        (if (bound.isEmpty()) nil() else (if (free.isEmpty()) bound.map { it.text() }.hSep() else space() + bound.map { it.text() }.hSep())) +
         space() + "->".text() + space() + exp.show()
 
 fun Exp.show(): Doc<Nothing> = when (this) {
     is Exp.Let -> listOf(
-        "let".text<Nothing>() spaced b.show().align(),
-        "in".text<Nothing>() spaced e.show()
+        "let".text() spaced b.show().align(),
+        "in".text() spaced e.show()
     ).vSep().align()
     is Exp.Case -> listOf(
-        "case".text<Nothing>() spaced exp.show() spaced "of".text(),
+        "case".text() spaced exp.show() spaced "of".text(),
         alt.map { it.show() }.vSep().align().indent(4)
     ).vSep()
     is Exp.AppF -> when {
         args.isEmpty() -> fName.text()
-        else -> fName.text<Nothing>() spaced args.map { it.text<Nothing>() }.hSep()
+        else -> fName.text() spaced args.map { it.text() }.hSep()
     }
     is Exp.AppC -> when {
         args.isEmpty() -> cName.text()
-        else -> cName.text<Nothing>() spaced args.map { it.text<Nothing>() }.hSep()
+        else -> cName.text() spaced args.map { it.text() }.hSep()
     }
-    is Exp.AppP -> opName.text<Nothing>() spaced l.text() spaced r.text()
+    is Exp.AppP -> opName.text() spaced l.text() spaced r.text()
     is Exp.LitE -> v.doc()
 }
 fun Alt.show(): Doc<Nothing> = when {
-    args.isEmpty() -> con.text<Nothing>() spaced "->".text() spaced body.show()
-    else -> con.text<Nothing>() spaced args.map { it.text<Nothing>() }.hSep() spaced "->".text() spaced body.show()
+    args.isEmpty() -> con.text() spaced "->".text() spaced body.show()
+    else -> con.text() spaced args.map { it.text() }.hSep() spaced "->".text() spaced body.show()
 }
 

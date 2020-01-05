@@ -1,11 +1,9 @@
 package pretty
 
-import arrow.core.Option
+import arrow.core.*
 import arrow.core.extensions.fx
-import arrow.core.getOrElse
-import arrow.core.none
-import arrow.core.some
 import arrow.free.*
+import arrow.syntax.collections.tail
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
@@ -13,46 +11,32 @@ import kotlin.math.round
 typealias FittingFun<A> = SimpleDoc<A>.(pageWidth: PageWidth, minNesting: Int, availableWidth: Option<Int>) -> Boolean
 
 fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { _, _, avail ->
-    avail.fold({ true }, { w ->
-        cata<A, (Int) -> TrampolineF<Boolean>> {
-            { i: Int ->
-                Trampoline.defer {
-                    if (i >= 0) when (it) {
-                        is SimpleDocF.Text -> it.doc(i - it.str.length)
-                        is SimpleDocF.AddAnnotation -> it.doc(i)
-                        is SimpleDocF.RemoveAnnotation -> it.doc(i)
-                        is SimpleDocF.Fail -> Free.just(false)
-                        else -> Free.just(true)
-                    } else Free.just(false)
-                }
-            }
-        }(w).runT()
-    })
+    tailrec fun <A> SimpleDoc<A>.test(i: Int): Boolean =
+        if (i < 0) false else when (val dF = unDoc.value()) {
+            is SimpleDocF.Text -> dF.doc.test(i - dF.str.length)
+            is SimpleDocF.AddAnnotation -> dF.doc.test(i)
+            is SimpleDocF.RemoveAnnotation -> dF.doc.test(i)
+            is SimpleDocF.Fail -> false
+            is SimpleDocF.Nil -> true
+            is SimpleDocF.Line -> true
+        }
+    avail.fold({ true }, { w -> test(w) })
 }
 
 fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { pw, minNest, avail ->
-    avail.fold({ true }, { w ->
-        cata<A, (PageWidth, Int, Int) -> TrampolineF<Boolean>> {
-            { pw, m, w ->
-                Trampoline.defer {
-                    if (w >= 0) when (it) {
-                        is SimpleDocF.Fail -> Free.just(false)
-                        is SimpleDocF.Nil -> Free.just(true)
-                        is SimpleDocF.RemoveAnnotation -> it.doc(pw, m, w)
-                        is SimpleDocF.AddAnnotation -> it.doc(pw, m, w)
-                        is SimpleDocF.Text -> it.doc(pw, m, w - it.str.length)
-                        is SimpleDocF.Line -> when (pw) {
-                            is PageWidth.Available -> if (m < it.i) it.doc(pw, m, pw.maxWidth - it.i) else Free.just(
-                                false
-                            )
-                            else -> Free.just(true)
-                        }
-                    }
-                    else Free.just(false)
-                }
+    tailrec fun <A> SimpleDoc<A>.test(pw: PageWidth, m: Int, w: Int): Boolean =
+        if (w < 0) false else when (val dF = unDoc.value()) {
+            is SimpleDocF.Fail -> false
+            is SimpleDocF.Nil -> true
+            is SimpleDocF.RemoveAnnotation -> dF.doc.test(pw, m, w)
+            is SimpleDocF.AddAnnotation -> dF.doc.test(pw, m, w)
+            is SimpleDocF.Text -> dF.doc.test(pw, m, w - dF.str.length)
+            is SimpleDocF.Line -> when (pw) {
+                is PageWidth.Available -> if (m < dF.i) dF.doc.test(pw, m, pw.maxWidth - dF.i) else false
+                else -> true
             }
-        }(pw, minNest, w).runT()
-    })
+        }
+    avail.fold({ true }, { w -> test(pw, minNest, w) })
 }
 
 fun <A> Doc<A>.layoutWadlerLeijen(
@@ -83,49 +67,29 @@ fun <A> Doc<A>.layoutWadlerLeijen(
                 })
         ) x else y()
 
-    return cata<A, (n: Int, k: Int, i: Int, nextEl: (nextN: Int, nextK: Int, nextI: Int) -> TrampolineF<Option<SimpleDoc<A>>>) -> TrampolineF<Option<SimpleDoc<A>>>> {
-        { n, k, i, next ->
-            Trampoline.defer {
-                when (val dF = it) {
-                    is DocF.Nil -> next(n, k, i)
-                    is DocF.Text ->
-                        next(n, k + dF.str.length, i).fix().map { it.map {
-                            when (val rdF = it.unDoc) {
-                                is SimpleDocF.Text -> SimpleDoc.text(dF.str + rdF.str, rdF.doc)
-                                else -> SimpleDoc.text(dF.str, it)
-                            }
-                        } }
-                    is DocF.Combined ->
-                        dF.l(n, k, i) { a, b, _ -> Trampoline.defer { dF.r(a, b, i, next) } }
-                    is DocF.Union ->
-                        dF.l(n, k, i, next).flatMap { tL ->
-                            Trampoline.later {
-                                tL.map { l ->
-                                    selectNicer(n, k, l) {
-                                        dF.r(n, k, i, next).runT().getOrElse { SimpleDoc(SimpleDocF.Fail()) }
-                                    }
-                                }
-                            }
-                        }.flatMap { it.fold({ dF.r(n, k, i, next) }, { Free.just(it.some()) }) }
-                    is DocF.Line -> next(i, i, 0).map { it.map { SimpleDoc.line(i, it) } }
-                    is DocF.WithPageWidth -> dF.doc(pageWidth)(n, k, i, next)
-                    is DocF.Annotated ->
-                        dF.doc(n, k, i) { a, b, c ->
-                            Trampoline.defer { next(a, b, c).map { it.map { SimpleDoc.removeAnnotation(it) } } }
-                        }.map { it.map { SimpleDoc.addAnnotation(dF.ann, it) } }
-                    is DocF.FlatAlt -> dF.l(n, k, i, next)
-                    is DocF.Fail -> Free.just(none())
-                    is DocF.Nest ->
-                        dF.doc(n, k, i + dF.i) { a, b, _ ->
-                            Trampoline.defer {
-                                next(a, b, i)
-                            }
-                        }
-                    is DocF.Column -> dF.doc(k)(n, k, i, next)
-                    is DocF.Nesting -> dF.doc(i)(n, k, i, next)
+    fun lBest(nl: Int, cc: Int, xs: List<Option<Tuple2<Int, Doc<A>>>>): SimpleDoc<A> = SimpleDoc(Eval.later {
+        if (xs.isEmpty()) SimpleDocF.Nil
+        else xs.first().fold({ SimpleDocF.RemoveAnnotation(lBest(nl, cc, xs.tail())) }, { (i, fst) ->
+            when (val curr = fst.unDoc.value()) {
+                is DocF.Fail -> SimpleDocF.Fail
+                is DocF.Nil -> lBest(nl, cc, xs.tail()).unDoc.value()
+                is DocF.Text -> SimpleDocF.Text(curr.str, lBest(nl, cc + curr.str.length, xs.tail()))
+                is DocF.Line -> SimpleDocF.Line(i, lBest(i, i, xs.tail()))
+                is DocF.FlatAlt -> lBest(nl, cc, listOf((i toT curr.l).some()) + xs.tail()).unDoc.value()
+                is DocF.Combined -> lBest(nl, cc, listOf((i toT curr.l).some(), (i toT curr.r).some()) + xs.tail()).unDoc.value()
+                is DocF.Nest -> lBest(nl, cc, listOf(((i + curr.i) toT curr.doc).some()) + xs.tail()).unDoc.value()
+                is DocF.Union -> {
+                    val lEval = Eval.later { lBest(nl, cc, listOf((i toT curr.l).some()) + xs.tail()) }
+                    val rEval = Eval.later { lBest(nl, cc, listOf((i toT curr.r).some()) + xs.tail()) }
+                    lEval.flatMap { selectNicer(nl, cc, it) { rEval.value }.unDoc }.value()
                 }
+                is DocF.Column -> lBest(nl, cc, listOf((i toT curr.doc(cc)).some()) + xs.tail()).unDoc.value()
+                is DocF.Nesting -> lBest(nl, cc, listOf((i toT curr.doc(i)).some()) + xs.tail()).unDoc.value()
+                is DocF.WithPageWidth -> lBest(nl, cc, listOf((i toT curr.doc(pageWidth)).some()) + xs.tail()).unDoc.value()
+                is DocF.Annotated -> SimpleDocF.AddAnnotation(curr.ann, lBest(nl, cc, listOf((i toT curr.doc).some(), None) + xs.tail()))
             }
-        }
-    }(0, 0, 0) { _, _, _ -> Trampoline.later { SimpleDoc.nil<A>().some() } }.runT()
-        .getOrElse { SimpleDoc(SimpleDocF.Fail()) }
+        })
+    })
+
+    return lBest(0, 0, listOf((0 toT this).some()))
 }

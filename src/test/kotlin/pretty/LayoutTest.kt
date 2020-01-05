@@ -25,12 +25,10 @@ class LayoutTest : PropertySpec({
                     Eval.later {
                         d.layoutPretty(pw)
                             .eqv(
-                                d.best(pw).fuseText(),
+                                d.best(pw),
                                 Eq { a, b ->
-                                    when (a.unDoc) {
-                                        is SimpleDocF.Fail -> b.hasFailure()
-                                        else -> SimpleDoc.eq(Int.eq()).run { a.eqv(b) }
-                                    }
+                                    if (a.hasFailure()) b.hasFailure()
+                                    else SimpleDoc.eq(Int.eq()).run { a.eqv(b) }
                                 }
                             )
                     }
@@ -42,11 +40,11 @@ class LayoutTest : PropertySpec({
 
 fun <A> SimpleDoc<A>.fuseText(): SimpleDoc<A> = cata {
     when (it) {
-        is SimpleDocF.Text -> when (val dF = it.doc.unDoc) {
+        is SimpleDocF.Text -> when (val dF = it.doc.unDoc.value()) {
             is SimpleDocF.Text -> SimpleDoc.text(it.str + dF.str, dF.doc)
-            else -> SimpleDoc(it)
+            else -> SimpleDoc(Eval.now(it))
         }
-        else -> SimpleDoc(it)
+        else -> SimpleDoc(Eval.now(it))
     }
 }
 
@@ -65,13 +63,13 @@ sealed class Step<A> {
 internal fun <A> be(pw: PageWidth, n: Int, k: Int, ls: Step<A>): SimpleDoc<A> = when (ls) {
     is Step.Empty -> SimpleDoc.nil()
     is Step.UndoAnnotation -> SimpleDoc.removeAnnotation(be(pw, n, k, ls.tail))
-    is Step.Cons -> when (val dF = ls.el.unDoc) {
-        is DocF.Fail -> SimpleDoc(SimpleDocF.Fail())
+    is Step.Cons -> when (val dF = ls.el.unDoc.value()) {
+        is DocF.Fail -> SimpleDoc.fail()
         is DocF.Nil -> be(pw, n, k, ls.tail)
         is DocF.Combined -> be(pw, n, k, Step.Cons(ls.i, dF.l, Step.Cons(ls.i, dF.r, ls.tail)))
         is DocF.Nest -> be(pw, n, k, Step.Cons(ls.i + dF.i, dF.doc, ls.tail))
-        is DocF.Text -> SimpleDoc(SimpleDocF.Text(dF.str, be(pw, n, k + dF.str.length, ls.tail)))
-        is DocF.Line -> SimpleDoc(SimpleDocF.Line(ls.i, be(pw, ls.i, ls.i, ls.tail)))
+        is DocF.Text -> SimpleDoc(Eval.later { SimpleDocF.Text(dF.str, be(pw, n, k + dF.str.length, ls.tail)) })
+        is DocF.Line -> SimpleDoc(Eval.later { SimpleDocF.Line(ls.i, be(pw, ls.i, ls.i, ls.tail)) })
         is DocF.Union ->
             (be(pw, n, k, Step.Cons(ls.i, dF.l, ls.tail)) toT be(pw, n, k, Step.Cons(ls.i, dF.r, ls.tail)))
                 .let { (x, y) ->

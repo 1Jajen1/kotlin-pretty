@@ -82,7 +82,7 @@ fun <A> Doc<A>.layoutWadlerLeijenLazy(
                     is DocF.Union ->
                         dF.l(n, k, i, next).map { l ->
                             selectNicer(n, k, l) {
-                                dF.r(n, k, i, next).getOrElse { SimpleDoc(SimpleDocF.Fail()) }
+                                dF.r(n, k, i, next).getOrElse { SimpleDoc(Eval.now(SimpleDocF.Fail)) }
                             }
                         }.orElse { dF.r(n, k, i, next) }
                     is DocF.Line -> next(i, i, 0).map { SimpleDoc.line(i, it) }
@@ -99,9 +99,9 @@ fun <A> Doc<A>.layoutWadlerLeijenLazy(
                 }
             }
         },
-        { Eval.later { it.unDoc } },
+        { Eval.defer { it.unDoc } },
         Eval.functor(),
         DocF.functor()
     )
-        .invoke(0, 0, 0) { _, _, _ -> SimpleDoc.nil<A>().some() }.getOrElse { SimpleDoc(SimpleDocF.Fail()) }
+        .invoke(0, 0, 0) { _, _, _ -> SimpleDoc.nil().some() }.getOrElse { SimpleDoc(Eval.now(SimpleDocF.Fail)) }
 }
