@@ -4,6 +4,10 @@ apply plugin: 'kotlin-kapt'
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
+    implementation "io.arrow-kt:arrow-core:$arrow_version"
+    implementation "io.arrow-kt:arrow-fx:$arrow_version"
+    api project(":kotlin-pretty")
+
     kapt "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
     kaptTest "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
 

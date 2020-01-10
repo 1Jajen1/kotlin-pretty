@@ -3,7 +3,9 @@ package pretty
 sealed class PageWidth {
     data class Available(val maxWidth: Int, val ribbonFract: Float): PageWidth()
     object Unbounded: PageWidth()
-    companion object
+    companion object {
+        fun default(): PageWidth = Available(80, 0.4F)
+    }
 }
 
 fun String.words(): List<Doc<Nothing>> =
