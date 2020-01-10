@@ -3,13 +3,15 @@ package pretty
 import arrow.core.MapK
 import arrow.core.Nel
 import arrow.core.toT
+import pretty.symbols.lParen
+import pretty.symbols.rParen
+import pretty.symbols.space
 import propCheck.arbitrary.*
 import propCheck.arbitrary.gen.applicative.applicative
 import propCheck.arbitrary.gen.monad.monad
 import propCheck.instances.arbitrary
 import propCheck.instances.mapk.arbitrary.arbitrary
 import propCheck.instances.nonemptylist.arbitrary.arbitrary
-import propCheck.sample
 
 // https://github.com/quchen/prettyprinter/blob/master/prettyprinter/bench/LargeOutput.hs
 data class Program(val unProgram: Binds)
@@ -87,7 +89,7 @@ fun <A> Gen<A>.fromTo(i: Int, j: Int): Gen<A> = Gen.monad().fx.monad {
 
 fun Program.show(): Doc<Nothing> = unProgram.show()
 fun Binds.show(): Doc<Nothing> = unBinds.toList()
-    .map { (k, v) -> k.text() spaced equals() spaced v.show() }
+    .map { (k, v) -> k.text() spaced pretty.symbols.equals() spaced v.show() }
     .vSep()
     .align()
 
