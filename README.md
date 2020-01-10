@@ -1,4 +1,4 @@
-# kotlin-prettify
+# kotlin-prettify [ ![Download](https://api.bintray.com/packages/jannis/kotlin-pretty/kotlin-pretty/images/download.svg) ](https://bintray.com/jannis/kotlin-pretty/kotlin-pretty/_latestVersion)
 > A pretty printer library for kotlin
 
 ```groovy
