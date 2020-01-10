@@ -1,2 +1,3 @@
 rootProject.name = 'kotlin-prettify'
 
+include 'kotlin-pretty', 'kotlin-pretty-ansi'

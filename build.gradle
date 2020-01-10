@@ -1,145 +1,43 @@
 buildscript {
+    ext {
+        arrow_version = "0.10.5-SNAPSHOT"
+        kotlinVersion = "1.3.61"
+    }
+
     repositories {
         jcenter()
-
         maven {
             url "https://plugins.gradle.org/m2/"
         }
     }
     dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.+'
-        classpath "com.github.jengelman.gradle.plugins:shadow:5.1.0"
         classpath "me.champeau.gradle:jmh-gradle-plugin:0.5.0"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
     }
 }
 
-plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.3.50'
-    id 'maven-publish'
-    id "com.jfrog.bintray" version "1.8.0"
-    id 'org.jetbrains.kotlin.plugin.allopen' version "1.3.50"
-}
-
-allOpen {
-    annotation("org.openjdk.jmh.annotations.State")
-}
-
-repositories {
-    jcenter()
-    maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
-    maven { url 'https://dl.bintray.com/jannis/propCheck-kt' }
-}
-
-apply plugin: 'kotlin-kapt'
-apply plugin: "com.github.johnrengelman.shadow"
-apply plugin: 'me.champeau.gradle.jmh'
-
-group 'kotlin-pretty'
-version '0.3.11'
-
-def arrow_version = "0.10.5-SNAPSHOT"
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.3.21" // For forAll instance lookups
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-
-    kapt "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
-
-    implementation "io.arrow-kt:arrow-syntax:$arrow_version" // helper functions like curried...
-    implementation "io.arrow-kt:arrow-recursion:$arrow_version" // Recursion schemes
-
-    kaptTest "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
-
-    testImplementation "propCheck:propCheck-kt:0.9.6"
-
-    testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2") {
-        exclude group: "io.arrow-kt"
-    }
-    testImplementation("io.arrow-kt:arrow-test:$arrow_version") { // test helpers and laws
-        exclude group: "io.kotlintest"
-    }
-
-    jmh "propCheck:propCheck-kt:0.9.6"
-
-}
-
-test {
-    useJUnitPlatform()
-}
-
-compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-compileJmhKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-artifacts {
-    archives sourcesJar
-}
-
-def pomConfig = {
-    licenses {
-        license {
-            name "BSD-3"
-            url "https://github.com/1Jajen1/kotlin-pretty/blob/master/LICENSE"
-            distribution "repo"
+allprojects {
+    repositories {
+        jcenter()
+        maven {
+            url "https://plugins.gradle.org/m2/"
         }
-    }
-    developers {
-        developer {
-            id "jannis"
-            name "Jannis Overesch"
-            email "overesch.jannis@gmail.com"
-        }
-    }
-
-    scm {
-        url "https://github.com/1Jajen1/kotlin-pretty"
+        maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
+        maven { url 'https://dl.bintray.com/jannis/propCheck-kt' }
     }
 }
 
-publishing {
-    publications {
-        mavenPublication(MavenPublication) {
-            from components.java
-            artifact sourcesJar {
-                classifier "sources"
-            }
-            groupId 'kotlin-pretty'
-            artifactId 'kotlin-pretty'
-            version '0.3.11'
-            pom.withXml {
-                def root = asNode()
-                root.appendNode('description', 'Kotlin pretty printer implementation')
-                root.appendNode('name', 'kotlin-pretty')
-                root.appendNode('url', 'https://github.com/1Jajen1/kotlin-pretty')
-                root.children().last() + pomConfig
-            }
-        }
-    }
-}
+subprojects { proj ->
+    group = GROUP
+    version = VERSION_NAME
 
-bintray {
-    publish = true
-    user = System.getenv('BINTRAY_USER')
-    key = System.getenv('BINTRAY_KEY')
-    publications = ['mavenPublication']
-    pkg {
-        repo = 'kotlin-pretty'
-        name = 'kotlin-pretty'
-        licenses = ['BSD-3']
-        vcsUrl = 'https://github.com/1Jajen1/kotlin-pretty'
-        version {
-            name = '0.3.11'
-            released  = new Date()
-        }
+    apply plugin: 'kotlin'
+
+    compileKotlin {
+        kotlinOptions.jvmTarget = "1.8"
+    }
+    compileTestKotlin {
+        kotlinOptions.jvmTarget = "1.8"
     }
 }
