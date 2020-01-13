@@ -20,17 +20,14 @@ jobs:
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
-        hugo-version: '0.61.0'
+        hugo-version: '0.62.0'
         extended: true
 
-    - name: Install postcss
+    - name: Build
       run: |
         sudo npm install -g --save autoprefixer
         sudo npm install -g --save postcss-cli
-      working-directory: docs
-
-    - name: Build
-      run: hugo --minify
+        hugo --minify
       working-directory: docs
 
     - name: Deploy
