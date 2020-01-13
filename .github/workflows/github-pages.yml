@@ -31,5 +31,4 @@ jobs:
         PUBLISH_DIR: ./public
       with:
         emptyCommits: false
-        forceOrphan: true
         commitMessage: ${{ github.event.head_commit.message }}
