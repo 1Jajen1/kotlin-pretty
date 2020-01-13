@@ -1,4 +1,4 @@
-baseURL = "http://example.org/"
+baseURL = "https://1jajen1.github.io/kotlin-pretty/"
 languageCode = "en-us"
 title = "Hugo test"
 theme = "docsy"
