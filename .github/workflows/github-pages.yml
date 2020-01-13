@@ -24,7 +24,9 @@ jobs:
         extended: true
 
     - name: Install postcss
-      run: npm i postcss
+      run: |
+        npm install -D --save autoprefixer
+        npm install -D --save postcss-cli
       working-directory: docs
 
     - name: Build
