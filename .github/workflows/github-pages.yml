@@ -30,7 +30,7 @@ jobs:
 
     - name: Build
       run: |
-        npm install -g postcss-cli autoprefixer
+        npm install -D postcss-cli autoprefixer
         hugo --minify
       working-directory: docs
 
