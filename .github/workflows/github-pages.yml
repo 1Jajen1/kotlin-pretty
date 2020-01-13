@@ -20,7 +20,9 @@ jobs:
         # extended: true
 
     - name: Build
-      run: hugo --minify
+      run: |
+        hugo --minify
+        touch ./public/.nojekyll
       working-directory: docs
 
     - name: Deploy
@@ -30,4 +32,6 @@ jobs:
         PUBLISH_BRANCH: gh-pages
         PUBLISH_DIR: ./public
       with:
+        emptyCommits: false
         forceOrphan: true
+        commitMessage: ${{ github.event.head_commit.message }}
