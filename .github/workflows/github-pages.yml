@@ -25,8 +25,8 @@ jobs:
 
     - name: Install postcss
       run: |
-        npm install -D --save autoprefixer
-        npm install -D --save postcss-cli
+        sudo npm install -D --save autoprefixer
+        sudo npm install -D --save postcss-cli
       working-directory: docs
 
     - name: Build
