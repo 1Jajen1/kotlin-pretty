@@ -1,4 +1,81 @@
 baseURL = "https://1jajen1.github.io/kotlin-pretty/"
 languageCode = "en-us"
-title = "Hugo test"
+title = "Kotlin pretty - Easy to use, powerful and extensible prettyprinter"
 theme = "docsy"
+contentDir = "content/en"
+defaultContentLanguage = "en"
+defaultContentLanguageInSubdir = false
+# Useful when translating.
+enableMissingTranslationPlaceholders = true
+
+# Highlighting config
+pygmentsCodeFences = true
+pygmentsUseClasses = false
+# Use the new Chroma Go highlighter in Hugo.
+pygmentsUseClassic = false
+pygmentsStyle = "github"
+
+[[menu.main]]
+    name = "GitHub"
+    weight = 50
+    url = "https://github.com/1Jajen1/kotlin-pretty"
+
+[languages]
+[languages.en]
+title = "Kotlin pretty - Easy to use, powerful and extensible prettyprinter"
+description = "Documentation for kotlin-pretty"
+languageName ="English"
+# Weight used for sorting.
+weight = 1
+
+[params]
+copyright = "The Kotlin-pretty authors"
+
+# First one is picked as the Twitter card image if not set on page.
+# images = ["images/project-illustration.png"]
+
+# Menu title if your navbar has a versions selector to access old versions of your site.
+# This menu appears only if you have at least one [params.versions] set.
+version_menu = "Releases"
+
+# Repository configuration (URLs for in-page links to opening issues and suggesting changes)
+github_repo = "https://github.com/1Jajen1/kotlin-pretty"
+# An optional link to a related project repo. For example, the sibling repository where your product code lives.
+github_project_repo = "https://github.com/1Jajen1/kotlin-pretty"
+
+# Specify a value here if your content directory is not in your repo's root directory
+github_subdir = "docs"
+
+# Enable Algolia DocSearch
+# TODO
+# algolia_docsearch = true
+
+[params.links]
+# Developer relevant links. These will show up on right side of footer and in the community page if you have one.
+[[params.links.developer]]
+	name = "Kotlin pretty github repo"
+	url = "https://github.com/1Jajen1/kotlin-pretty"
+	icon = "fab fa-github"
+
+# User interface configuration
+[params.ui]
+# Enable to show the side bar menu in its compact state.
+sidebar_menu_compact = false
+#  Set to true to disable breadcrumb navigation.
+breadcrumb_disable = false
+#  Set to true to hide the sidebar search box (the top nav search box will still be displayed if search is enabled)
+sidebar_search_disable = false
+#  Set to false if you don't want to display a logo (/assets/icons/logo.svg) in the top nav bar
+navbar_logo = false
+# Set to true to disable the About link in the site footer
+footer_about_disable = false
+
+# Adds a H2 section titled "Feedback" to the bottom of each doc. The responses are sent to Google Analytics as events.
+# This feature depends on [services.googleAnalytics] and will be disabled if "services.googleAnalytics.id" is not set.
+# If you want this feature, but occasionally need to remove the "Feedback" section from a single page,
+# add "hide_feedback: true" to the page's front matter.
+[params.ui.feedback]
+enable = true
+# The responses that the user sees after clicking "yes" (the page was helpful) or "no" (the page was not helpful).
+yes = 'Glad to hear it! Please <a href="https://github.com/USERNAME/REPOSITORY/issues/new">tell us how we can improve</a>.'
+no = 'Sorry to hear that. Please <a href="https://github.com/USERNAME/REPOSITORY/issues/new">tell us how we can improve</a>.'
