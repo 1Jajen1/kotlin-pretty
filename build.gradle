@@ -14,7 +14,32 @@ buildscript {
         classpath "me.champeau.gradle:jmh-gradle-plugin:0.5.0"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
+        classpath "io.arrow-kt:arrow-ank-gradle:0.10.4" // TODO update when 0.10.5 is out
     }
+}
+
+// ank setup, kotlin project + sources from both subprojects
+apply plugin: 'ank-gradle-plugin'
+apply plugin: 'kotlin'
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "io.arrow-kt:arrow-ank:$arrow_version"
+    implementation project(":kotlin-pretty")
+    implementation project(":kotlin-pretty-ansi")
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+ank {
+    source = file("docs/contentIn")
+    target = file("docs/content")
+    classpath = sourceSets.main.runtimeClasspath
 }
 
 allprojects {

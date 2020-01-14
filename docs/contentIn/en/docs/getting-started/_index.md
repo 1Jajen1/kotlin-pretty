@@ -4,14 +4,11 @@ date: 2020-01-14
 weight: 10
 type: "docs"
 description: >
-    This is a step-by-step tutorial on how to install and use kotlin-pretty.
+    A step-by-step tutorial on how to install and use kotlin-pretty.
 ---
 
 ## Setup
 ----
-
-TODO Add switchable code blocks that depend on a global var (gradle/maven/...) setup
-TODO Don't hardcode the version, keep it constant somewhere
 
 ### Gradle
 
@@ -30,6 +27,8 @@ dependencies {
 ## Rendering data
 
 > TODO API DOC REFERENCES and check if the code actually works. ANK ^^
+
+In this section we will go over creating a very basic rich document for a datatype and how to render it. This will not be the prettiest or best layout possible, just a simple example to get started.
 
 ### Creating a document from a datatype
 
@@ -106,6 +105,9 @@ Now that we have a `SimpleDoc` layout all that is left to do is rendering it. To
 This gives us the full code:
 
 ```kotlin
+import pretty.*
+import pretty.symbols.colon
+
 data class ErrReport(
     // what happened
     val errorMsg: String,
@@ -130,19 +132,36 @@ fun main() {
     val rep = ErrReport("Failed to do some very important task", "someFile.txt", 4 to 10)
 
     val renderedString = rep.doc()
-        .layoutPretty(PageWidth.Available(80, 0.4F))
+        .layoutPretty(PageWidth.Available(80, 0.5F))
         .renderString()
 
     println(renderedString)
+    print("\n")
 
     // and with a smaller width
     val renderedString2 = rep.doc()
-        .layoutPretty(PageWidth.Available(10, 0.4F))
+        .layoutPretty(PageWidth.Available(20, 0.5F))
         .renderString()
 
     println(renderedString2)
 }
+// When run this should print:
+/* 
+Error in file someFile.txt at line 4 to line 10:
+Failed to do some very important task
+
+Error in file someFile.txt at line 4 to line 10:
+Failed to
+do some
+very
+important
+task
+*/
 ```
+
+With the larger max width the input stays on two lines and nicely fits the required max-width. However it fails to fit the ribbon-width (`80 * 0.5` in that case), but because there are no alternatives with more newlines the algorithm cannot choose a better layout. With the second much more constrained render this becomes even more obvious. The first line does not fit in 20 characters, but because there is no better layout it has to render it like that.
+
+To make a better layout we should have presented the layout algorithm with more options by using something like `softline` which can be either a space or a newline. You can learn more about those other options in the other sections of the docs. 
 
 ## Whats next
 

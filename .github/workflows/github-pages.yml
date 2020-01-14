@@ -22,11 +22,22 @@ jobs:
       with:
         node-version: '10.x'
 
+    # ank
+    - name: setup-java
+        uses: actions/setup-java@v1.3.0
+        with:
+          java-version: 1.8
+
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: '0.62.0'
         extended: true
+
+    - name: Ank
+      run: |
+        chmod +x gradlew
+        ./gradlew runAnk
 
     - name: Build
       run: |
