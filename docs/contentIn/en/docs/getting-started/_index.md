@@ -26,14 +26,14 @@ dependencies {
 
 ## Rendering data
 
-> TODO API DOC REFERENCES and check if the code actually works. ANK ^^
+> TODO API DOC REFERENCES
 
 In this section we will go over creating a very basic rich document for a datatype and how to render it. This will not be the prettiest or best layout possible, just a simple example to get started.
 
 ### Creating a document from a datatype
 
 Suppose we have an error-report datatype:
-```kotlin
+```kotlin:ank:silent
 data class ErrReport(
     // what happened
     val errorMsg: String,
@@ -46,7 +46,10 @@ data class ErrReport(
 
 Now we want to render this to a responsive document which adapts to the maximum width that we give it. In order to do so we will define a method `doc`.
 
-```kotlin
+```kotlin:ank:silent
+import pretty.*
+import pretty.symbols.colon
+
 fun ErrReport.doc(): Doc<Nothing> = "Error in file".text() spaced
     file.text() spaced
     "at".text() spaced
@@ -102,61 +105,19 @@ sealed class PageWidth {
 
 Now that we have a `SimpleDoc` layout all that is left to do is rendering it. To render any `SimpleDoc<A>` as a string, kotlin-pretty defines an extension method `SimpleDoc<A>.renderString(): String`. 
 
-This gives us the full code:
+```kotlin:ank
+val report = ErrReport("Failed to do some very important task", "someFile.txt", 4 to 10)
 
-```kotlin
-import pretty.*
-import pretty.symbols.colon
-
-data class ErrReport(
-    // what happened
-    val errorMsg: String,
-    // in which file it happened
-    val file: String,
-    // at what line, or which lines did it happen
-    val lineSpan: Pair<Int, Int>
-)
-
-fun ErrReport.doc(): Doc<Nothing> = "Error in file".text() spaced
-    file.text() spaced
-    "at".text() spaced
-    lineSpan.prettyLineSpan() + colon() + hardLine() +
-    errorMsg.reflow()
-
-fun Pair<Int, Int>.prettyLineSpan(): Doc<Nothing> =
-    if (first == second) "line $first".text()
-    else if (first > second) "line $second to line $first".text()
-    else "line $first to line $second".text()
-
-fun main() {
-    val rep = ErrReport("Failed to do some very important task", "someFile.txt", 4 to 10)
-
-    val renderedString = rep.doc()
-        .layoutPretty(PageWidth.Available(80, 0.5F))
-        .renderString()
-
-    println(renderedString)
-    print("\n")
-
-    // and with a smaller width
-    val renderedString2 = rep.doc()
-        .layoutPretty(PageWidth.Available(20, 0.5F))
-        .renderString()
-
-    println(renderedString2)
-}
-// When run this should print:
-/* 
-Error in file someFile.txt at line 4 to line 10:
-Failed to do some very important task
-
-Error in file someFile.txt at line 4 to line 10:
-Failed to
-do some
-very
-important
-task
-*/
+report
+    .doc()
+    .layoutPretty(PageWidth.Available(80, 0.5F))
+    .renderString()
+```
+And with a much smaller width:
+```kotlin:ank
+report.doc()
+    .layoutPretty(PageWidth.Available(20, 0.5F))
+    .renderString()
 ```
 
 With the larger max width the input stays on two lines and nicely fits the required max-width. However it fails to fit the ribbon-width (`80 * 0.5` in that case), but because there are no alternatives with more newlines the algorithm cannot choose a better layout. With the second much more constrained render this becomes even more obvious. The first line does not fit in 20 characters, but because there is no better layout it has to render it like that.

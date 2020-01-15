@@ -84,6 +84,9 @@ typealias DocOf<A> = Kind<ForDoc, A>
 inline fun <A> DocOf<A>.fix(): Doc<A> = this as Doc<A>
 
 data class Doc<out A>(val unDoc: Eval<DocF<A, Doc<A>>>) : DocOf<A> {
+
+    override fun toString(): String = pretty()
+
     companion object
 }
 

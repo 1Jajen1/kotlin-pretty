@@ -9,7 +9,7 @@ import pretty.symbols.*
 
 fun <A> Doc<A>.renderPretty(): SimpleDoc<A> = layoutPretty(PageWidth.Available(80, 0.4F))
 
-fun <A> Doc<A>.pretty(maxWidth: Int, ribbonWidth: Float): String =
+fun <A> Doc<A>.pretty(maxWidth: Int = 80, ribbonWidth: Float = 0.4F): String =
     layoutPretty(PageWidth.Available(maxWidth, ribbonWidth)).renderString()
 
 // primitives
