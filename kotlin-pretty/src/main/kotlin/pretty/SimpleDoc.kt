@@ -2,9 +2,9 @@ package pretty
 
 import arrow.Kind
 import arrow.Kind2
-import arrow.core.Eval
-import arrow.core.ForFunction0
-import arrow.core.Tuple2
+import arrow.core.*
+import arrow.core.extensions.id.applicative.applicative
+import arrow.core.extensions.monoid
 import arrow.extension
 import arrow.free.*
 import arrow.free.extensions.free.monad.monad
@@ -123,7 +123,7 @@ operator fun <A> SimpleDoc<A>.plus(b: SimpleDoc<A>): SimpleDoc<A> = cata {
         }
         else -> SimpleDoc(Eval.now(it))
     }
-}
+    }
 
 @extension
 interface SimpleDocEq<A> : Eq<SimpleDoc<A>> {
@@ -176,46 +176,49 @@ interface SimpleDocBirecursive<A> : Birecursive<SimpleDoc<A>, SimpleDocFPartialO
     override fun SimpleDoc<A>.projectT(): Kind<SimpleDocFPartialOf<A>, SimpleDoc<A>> = unDoc.value()
 }
 
-// TODO use string builder?
-fun <A> SimpleDoc<A>.renderString(): String = cata {
-    when (it) {
-        is SimpleDocF.Fail -> throw IllegalStateException("Encountered fail")
-        is SimpleDocF.Nil -> ""
-        is SimpleDocF.Text -> it.str + it.doc
-        is SimpleDocF.Line -> "\n" + spaces(it.i) + it.doc
-        is SimpleDocF.AddAnnotation -> it.doc
-        is SimpleDocF.RemoveAnnotation -> it.doc
-    }
-}
+// TODO Benchmark this against cata, a version with a string builder and a direct version
+fun <A> SimpleDoc<A>.renderString(): String =
+    renderDecorated(String.monoid(), ::identity, { "" }, { "" })
 
+// TODO Benchmark this against cata and a version without renderDecoratedA
+fun <A, B> SimpleDoc<A>.renderDecorated(
+    MO: Monoid<B>,
+    text: (String) -> B,
+    addAnnotation: (A) -> B,
+    removeAnnotation: (A) -> B
+): B = renderDecoratedA(Id.applicative(), MO, text.andThen(::Id), addAnnotation.andThen(::Id), removeAnnotation.andThen(::Id))
+    .value()
+
+// TODO Benchmark this against cata
+fun <F, A, B> SimpleDoc<A>.renderDecoratedA(
+    AP: Applicative<F>,
+    MO: Monoid<B>,
+    text: (String) -> Kind<F, B>,
+    addAnnotation: (A) -> Kind<F, B>,
+    removeAnnotation: (A) -> Kind<F, B>
+): Kind<F, B> {
+    tailrec fun SimpleDoc<A>.go(xs: List<A>, cont: (Kind<F, B>) -> Kind<F, B>): Kind<F, B> = when (val dF = unDoc.value()) {
+        is SimpleDocF.Nil -> cont(AP.just(MO.empty()))
+        is SimpleDocF.Fail -> throw IllegalStateException("Unexpected SimpleDoc.Fail in render")
+        is SimpleDocF.AddAnnotation -> dF.doc.go(listOf(dF.ann) + xs, AndThen(cont).compose {
+            AP.map(addAnnotation(dF.ann), it) { (a, b) -> MO.run { a + b } }
+        })
+        is SimpleDocF.RemoveAnnotation -> dF.doc.go(xs.tail(), AndThen(cont).compose {
+            AP.map(removeAnnotation(xs.first()), it) { (a, b) -> MO.run { a + b } }
+        })
+        is SimpleDocF.Text -> dF.doc.go(xs, AndThen(cont).compose {
+            AP.map(text(dF.str), it) { (a, b) -> MO.run { a + b } }
+        })
+        is SimpleDocF.Line -> dF.doc.go(xs, AndThen(cont).compose {
+            AP.map(text("\n${spaces(dF.i)}"), it) { (a, b) -> MO.run { a + b } }
+        })
+    }
+    return go(emptyList(), ::identity)
+}
 
 fun <A, B> SimpleDoc<A>.cata(f: (SimpleDocF<A, B>) -> B): B = SimpleDoc.birecursive<A>().run {
     cataM<FreePartialOf<ForFunction0>, B>(SimpleDocF.traverse(), Free.monad()) { Trampoline.later { f(it.fix()) } }.fix().runT()
 }
-
-// tailrec version, should be simple enough
-fun <A, B> SimpleDoc<A>.renderDecorated(
-    combine: (B, B) -> B,
-    text: (String) -> B,
-    addAnnotation: (A) -> B,
-    removeAnnotation: (A) -> B
-): B = cata<A, (List<A>) -> TrampolineF<B>> {
-    { annotations ->
-        Trampoline.defer {
-            when (it) {
-                is SimpleDocF.AddAnnotation -> it.doc(listOf(it.ann) + annotations).map { rec -> combine(addAnnotation(it.ann), rec) }
-                is SimpleDocF.RemoveAnnotation -> when {
-                    annotations.isEmpty() -> throw IllegalStateException("Encountered remove annotation without an annotation.")
-                    else -> it.doc(annotations.tail()).map { rec -> combine(removeAnnotation(annotations.first()), rec) }
-                }
-                is SimpleDocF.Line -> it.doc(annotations).map { rec -> combine(text("\n" + spaces(it.i)), rec) }
-                is SimpleDocF.Text -> it.doc(annotations).map { rec -> combine(text(it.str), rec) }
-                is SimpleDocF.Nil -> Free.just(text(""))
-                is SimpleDocF.Fail -> throw IllegalStateException("Encountered Fail. This is a bug in the layout function used to generate the SimpleDoc.")
-            }
-        }
-    }
-}(emptyList()).runT()
 
 fun <A, B> SimpleDoc<A>.para(f: (SimpleDocF<A, Tuple2<SimpleDoc<A>, B>>) -> B): B = SimpleDoc.birecursive<A>().run {
     paraM<FreePartialOf<ForFunction0>, B>(SimpleDocF.traverse(), Free.monad()) { Trampoline.later { f(it.fix()) } }.fix().runT()

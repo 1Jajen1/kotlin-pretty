@@ -6,7 +6,6 @@ import arrow.core.toT
 import arrow.typeclasses.Eq
 import pretty.doc.arbitrary.arbitrary
 import pretty.pagewidth.arbitrary.arbitrary
-import pretty.simpledoc.birecursive.birecursive
 import pretty.simpledoc.eq.eq
 import propCheck.discardIf
 import propCheck.eqv
@@ -97,21 +96,19 @@ fun <A> nicest(pw: PageWidth, n: Int, k: Int, x: SimpleDoc<A>, y: SimpleDoc<A>):
 
 // simple line fit
 fun <A> SimpleDoc<A>.fits_(w: Int): Boolean =
-    SimpleDoc.birecursive<A>().run {
-        this@fits_.cata<(Int) -> Boolean> {
-            { i: Int ->
-                i >= 0 && when (val dF = it.fix()) {
-                    is SimpleDocF.Text -> dF.doc(i - dF.str.length)
-                    is SimpleDocF.AddAnnotation -> dF.doc(i)
-                    is SimpleDocF.RemoveAnnotation -> dF.doc(i)
-                    is SimpleDocF.Fail -> false
-                    else -> true
-                }
+    this@fits_.cata<A, (Int) -> Boolean> {
+        { i: Int ->
+            i >= 0 && when (val dF = it.fix()) {
+                is SimpleDocF.Text -> dF.doc(i - dF.str.length)
+                is SimpleDocF.AddAnnotation -> dF.doc(i)
+                is SimpleDocF.RemoveAnnotation -> dF.doc(i)
+                is SimpleDocF.Fail -> false
+                else -> true
             }
-        }(w)
-    }
+        }
+    }(w)
 
-fun <A> SimpleDoc<A>.hasFailure(): Boolean = SimpleDoc.birecursive<A>().run {
+fun <A> SimpleDoc<A>.hasFailure(): Boolean =
     cata {
         when (val dF = it.fix()) {
             is SimpleDocF.Fail -> true
@@ -122,4 +119,3 @@ fun <A> SimpleDoc<A>.hasFailure(): Boolean = SimpleDoc.birecursive<A>().run {
             is SimpleDocF.Nil -> false
         }
     }
-}

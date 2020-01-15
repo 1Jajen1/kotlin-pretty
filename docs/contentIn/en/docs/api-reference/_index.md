@@ -643,6 +643,15 @@ Operations that use `SimpleDoc` instead of `Doc`. To learn more about `SimpleDoc
 
 ### Layout
 
+###### `fun Doc<A>.layoutPretty(pw: PageWidth): SimpleDoc<A>`
 
+The default layout algorithm which calculates a layout for a document.
 
+---
+###### `fun Doc<A>.layoutSmart(pw: PageWidth): SimpleDoc<A>`
+
+A layout algorithm which uses more lookahead than [layoutPretty](TODO). It is slightly slower, but can produce nicer results.
+
+---
 ### Render
+

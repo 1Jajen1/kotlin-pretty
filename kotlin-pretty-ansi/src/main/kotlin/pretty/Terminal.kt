@@ -6,6 +6,7 @@ import arrow.core.extensions.list.functorFilter.flattenOption
 import arrow.core.extensions.list.monad.flatMap
 import arrow.core.extensions.list.monad.flatten
 import arrow.core.extensions.listk.monoid.monoid
+import arrow.core.extensions.monoid
 import arrow.core.extensions.sequence.zip.zipWith
 import arrow.extension
 import arrow.fx.IO
@@ -27,11 +28,6 @@ sealed class Color {
 sealed class Intensity {
     object Dull : Intensity()
     object Vivid : Intensity()
-}
-
-sealed class Layer {
-    object Foreground : Layer()
-    object Background : Layer()
 }
 
 object Bold
