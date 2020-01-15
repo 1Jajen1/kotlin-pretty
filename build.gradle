@@ -24,7 +24,7 @@ apply plugin: 'kotlin'
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "io.arrow-kt:arrow-ank:$arrow_version"
+    implementation "io.arrow-kt:arrow-ank:0.10.4" // TODO update ank when the issues in master are fixed
     implementation project(":kotlin-pretty")
     implementation project(":kotlin-pretty-ansi")
 }
