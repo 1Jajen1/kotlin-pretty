@@ -210,36 +210,439 @@ bracedDoc.pretty(maxWidth = 80)
 bracedDoc.pretty(maxWidth = 10)
 ```
 
-### Infix/binary Don't forget the line aliases with infix that I have^^
+---
+### Binary and infix functions
 
+###### `fun <A> Doc<A>.plus(other: Doc<A>): Doc<A>`
+
+Concatenate two documents.
+```kotlin:ank
+"Hello".text() + space() + "world".text()
+```
+
+---
+###### `fun <A> Doc<A>.spaced(other: Doc<A>): Doc<A>`
+
+Concatenate two documents with a space in between.
+```kotlin:ank
+"Hello".text() spaced "world".text()
+```
+
+---
+###### `fun <A> Doc<A>.line(other: Doc<A>): Doc<A>` 
+
+Concatenate two documents with a [line](TODO) in between.
+```kotlin:ank
+"Hello".text() line "world".text()
+```
+
+---
+###### `fun <A> Doc<A>.lineBreak(other: Doc<A>): Doc<A>`
+
+Concatenate two documents with a [lineBreak](TODO) in between.
+```kotlin:ank
+"Hello".text() lineBreak "world".text()
+```
+
+---
+###### `fun <A> Doc<A>.softLine(other: Doc<A>): Doc<A>` 
+
+Concatenate two documents with a [softLine](TODO) in between.
+```kotlin:ank
+"Hello".text() softLine "world".text()
+```
+
+---
+###### `fun <A> Doc<A>.softLineBreak(other: Doc<A>): Doc<A>`
+
+Concatenate two documents with a [softLineBreak](TODO) in between.
+```kotlin:ank
+"Hello ".text() softLineBreak "world".text()
+```
+
+---
 ### List
 
+These functions generalize working over lists of documents. They are separated into two families: `sep` and `cat` where `sep` uses [line](TODO) and `cat` uses [lineBreak](TODO) to separate content.
+
+###### `fun <A> List<Doc<A>>.foldDoc(f: (Doc<A>, Doc<A>) -> Doc<A>): Doc<A>`
+
+Concatenate the documents in a list given a binary function `f`. Almost all other operators on lists are implemented using this function.
+
+---
+###### `fun <F, A> Kind<F, Doc<A>>.foldDoc(FF: Foldable<F>, f: (Doc<A>, Doc<A>) -> Doc<A>): Doc<A>`
+
+Kind polymorphic version of [foldDoc](TODO) that allows folding any foldable structure.
+
+---
 #### Sep
 
+Functions from this list will use [line](TODO) to insert linebreaks. This means it when used with [group](TODO) they will be replaced by spaces.
+
+###### `fun <A> List<Doc<A>>.hSep(): Doc<A>`
+
+Concatenate all documents using [spaced](TODO). This never introduces newlines on its own.
+```kotlin:ank
+val hSepDoc = listOf("Hello".text(), "there!".text(), "- Kenobi".text()).hSep()
+hSepDoc.pretty(maxWidth = 80)
+```
+```kotlin:ank
+hSepDoc.pretty(maxWidth = 10)
+```
+For a layout that automatically adds linebreaks, consider [fillSep](TODO) instead.
+
+---
+###### `fun <A> List<Doc<A>>.vSep(): Doc<A>`
+
+Concatenate all documents vertically using [line](TODO).
+```kotlin:ank
+val vSepDoc = listOf("Text".text(), "to".text(), "lay".text(), "out".text()).vSep()
+"prefix".text() spaced vSepDoc
+```
+```kotlin:ank
+"prefix".text() spaced vSepDoc.align()
+```
+Because later grouping a `vSep` is so common, [sep](TODO) is a built-in which does that.
+
+---
+###### `fun <A> List<Doc<A>>.fillSep(): Doc<A>`
+
+Concatenate all documents with [softLine](TODO). The resulting document will be as wide as possible, but introduce newlines if it no longer fits.
+```kotlin:ank
+val fillSepDoc = listOf(
+    "Very".text(), "long".text(), "text".text(),
+    "to".text(), "lay".text(), "out.".text(),
+    "Hello".text(), "world".text(), "example!".text()
+).fillSep()
+fillSepDoc.pretty(maxWidth = 80)
+```
+```kotlin:ank
+fillSepDoc.pretty(maxWidth = 40)
+```
+
+---
+###### `fun <A> List<Doc<A>>.sep(): Doc<A>`
+
+Concatenate all documents with [softLine](TODO), but calls [group](TODO) on the resulting document to flatten it. This is different from [vSep] because it tries to lay out horizontally first, instead of just vertically. This is also different from [fillSep](TODO), because it will also flatten the individual documents instead of just the separator.
+```kotlin:ank
+val sepDoc = listOf("Text".text() line "that".text(), "spans".text(), "multiple".text(), "lines".text()).sep()
+sepDoc.pretty(maxWidth = 80)
+```
+```kotlin:ank
+sepDoc.pretty(maxWidth = 20)
+```
+
+---
 #### Cat
 
+Functions from this list will use [lineBreak](TODO) to insert linebreaks. This means it when used with [group](TODO) they will be replaced by [nil](TODO).
+
+###### `fun <A> List<Doc<A>>.hSep(): Doc<A>`
+
+Concatenate all documents using [plus](TODO). This never introduces newlines on its own.
+```kotlin:ank
+val hCatDoc = listOf("Hello".text(), "there!".text(), "- Kenobi".text()).hCat()
+hCatDoc.pretty(maxWidth = 80)
+```
+```kotlin:ank
+hCatDoc.pretty(maxWidth = 10)
+```
+For a layout that automatically adds linebreaks, consider [fillCat](TODO) instead.
+
+---
+###### `fun <A> List<Doc<A>>.vSep(): Doc<A>`
+
+Concatenate all documents vertically using [lineBreak](TODO).
+```kotlin:ank
+val vCatDoc = listOf("Text".text(), "to".text(), "lay".text(), "out".text()).vCat()
+"prefix".text() spaced vCatDoc
+```
+```kotlin:ank
+"prefix".text() spaced vCatDoc.align()
+```
+Because later grouping a `vCat` is so common, [cat](TODO) is a built-in which does that.
+
+---
+###### `fun <A> List<Doc<A>>.fillSep(): Doc<A>`
+
+Concatenate all documents with [softLineBreak](TODO). The resulting document will be as wide as possible, but introduce newlines if it no longer fits.
+```kotlin:ank
+val fillCatDoc = listOf(
+    "Very".text(), "long".text(), "text".text(),
+    "to".text(), "lay".text(), "out.".text(),
+    "Hello".text(), "world".text(), "example!".text()
+).fillCat()
+fillCatDoc.pretty(maxWidth = 80)
+```
+```kotlin:ank
+fillCatDoc.pretty(maxWidth = 40)
+```
+
+---
+###### `fun <A> List<Doc<A>>.cat(): Doc<A>`
+
+Concatenate all documents with [softLineBreak](TODO), but calls [group](TODO) on the resulting document to flatten it. This is different from [vCat] because it tries to lay out horizontally first, instead of just vertically. This is also different from [fillCat](TODO), because it will also flatten the individual documents instead of just the separator.
+```kotlin:ank
+val catDoc = listOf("Text".text() line "that".text(), "spans".text(), "multiple".text(), "lines".text()).cat()
+catDoc.pretty(maxWidth = 80)
+```
+```kotlin:ank
+catDoc.pretty(maxWidth = 20)
+```
+
+---
 ### Others
 
+###### `fun <A> List<Doc<A>>.punctuate(p: Doc<A>): List<Doc<A>>`
+
+Append `p` to all but the last document.
+```kotlin:ank
+val punctuateDoc = listOf("Hello".text(), "world".text(), "example".text())
+    .punctuate(comma())
+punctuateDoc.hSep().pretty(maxWidth = 80)
+```
+```kotlin:ank
+punctuateDoc.vSep().pretty(maxWidth = 20)
+```
+If you want to but elements infront of the documents you should use [encloseSep](TODO).
+
+---
 ### Reactive/conditional layouts
 
-### Filler
+Layout documents with access to context such as the current position, the available page width or the current nesting.
 
+###### `fun <A> column(f: (Int) -> Doc<A>): Doc<A>`
+
+Layout a document with information on what the current column is. Used to implement [align](TODO).
+```kotlin:ank
+column { c -> "Columns are".text() spaced c.doc() + "-based".text() }
+```
+```kotlin:ank
+val colDoc = "prefix".text() spaced column { pipe() spaced " <- column".text() spaced it.doc()  }
+listOf(0, 4, 8).map { colDoc.indent(it) }.vSep()
+```
+
+---
+###### `fun <A> nesting(f: (Int) -> Doc<A>): Doc<A>`
+
+Layout a document with information on what the current nesting is. Used to implement [align](TODO).
+```kotlin:ank
+val nestingDoc = "prefix".text() spaced nesting { ("Nested:".text() spaced it.doc()).brackets() }
+listOf(0, 4, 8).map { nestingDoc.indent(it) }.vSep()
+```
+
+---
+###### `fun <A> Doc<A>.width(f: (Int) -> Doc<A>): Doc<A>`
+
+Layout a document with information on what the current column width is.
+```kotlin:ank
+fun <A> annotate(d: Doc<A>): Doc<A> = d.brackets().width { w -> " <- width:".text() spaced w.doc() }
+listOf(
+    "---".text(), "------".text(), "---".text().indent(3),
+    listOf("---".text(), "---".text().indent(4)).vSep()
+).map(::annotate).vSep().align()
+```
+
+---
+###### `fun <A> pageWidth(f: (PageWidth) -> Doc<A>): Doc<A>`
+
+Layout a document with information on what the pagewidth settings are.
+```kotlin:ank
+fun PageWidth.doc(): Doc<Nothing> = when (this) {
+    PageWidth.Unbounded -> "Unbounded".text()
+    is PageWidth.Available ->
+        "Max width:".text() spaced maxWidth.doc() spaced ", ribbonFrac:".text() spaced ribbonFract.doc()
+}
+val _pwDoc = "prefix".text() spaced pageWidth { pw -> pw.doc().brackets() }
+val pwDoc = listOf(0, 4, 8).map { _pwDoc.indent(it) }.vSep()
+pwDoc.pretty(maxWidth = 32)
+```
+```kotlin:ank
+pwDoc.layoutPretty(PageWidth.Unbounded).renderString()
+```
+
+---
+### Fillers
+
+Fill up available space.
+
+###### `fun <A> Doc<A>.fill(i: Int): Doc<A>`
+
+Lay out a document and append spaces until it has a width of `i`.
+```kotlin:ank
+val types = listOf("empty" to "Doc", "nest" to "Int -> Doc -> Doc", "fillSep" to "[Doc] -> Doc")
+"let".text() spaced types.map { (n, tp) -> n.text().fill(5) spaced "::".text() spaced tp.text() }
+    .vCat().align()
+```
+
+---
+###### `fun <A> Doc<A>.fillBreak(i: Int): Doc<A>`
+
+Lay out a document and append spaces until it has a width of `i` and insert a lineBreak if it exceeds the desired width.
+```kotlin:ank
+val types = listOf("empty" to "Doc", "nest" to "Int -> Doc -> Doc", "fillSep" to "[Doc] -> Doc")
+"let".text() spaced types.map { (n, tp) -> n.text().fillBreak(5) spaced "::".text() spaced tp.text() }
+    .vCat().align()
+```
+
+---
 ### Convenience
 
+###### `fun <A> Doc<A>.enclose(l: Doc<A>, r: Doc<A>): Doc<A>`
+
+Surround the document with `l` and `r`.
+```kotlin:ank
+"Hello".text().enclose("_".text(), "_".text())
+```
+
+---
 ### Bracketing
 
-### Named characters
+Common functions to enclose documents.
 
 #### ASCII
 
+###### `fun <A> Doc<A>.sQuotes(): Doc<A>`
+
+```kotlin:ank
+"·".text().sQuotes()
+```
+
+---
+###### `fun <A> Doc<A>.dQuotes(): Doc<A>`
+
+```kotlin:ank
+"·".text().dQuotes()
+```
+
+---
+###### `fun <A> Doc<A>.parens(): Doc<A>`
+
+```kotlin:ank
+"·".text().parens()
+```
+
+---
+###### `fun <A> Doc<A>.angles(): Doc<A>`
+
+```kotlin:ank
+"·".text().angles()
+```
+
+---
+###### `fun <A> Doc<A>.braces(): Doc<A>`
+
+```kotlin:ank
+"·".text().braces()
+```
+
+---
+###### `fun <A> Doc<A>.brackets(): Doc<A>`
+
+```kotlin:ank
+"·".text().brackets()
+```
+
+---
 #### Unicode
+
+###### `fun <A> Doc<A>.d9966quotes(): Doc<A>`
+
+```kotlin:ank
+"·".text().d9966quotes()
+```
+
+---
+###### `fun <A> Doc<A>.d6699quotes(): Doc<A>`
+
+```kotlin:ank
+"·".text().d6699quotes()
+```
+
+---
+###### `fun <A> Doc<A>.s96quotes(): Doc<A>`
+
+```kotlin:ank
+"·".text().s96quotes()
+```
+
+---
+###### `fun <A> Doc<A>.s69quotes(): Doc<A>`
+
+```kotlin:ank
+"·".text().s69quotes()
+```
+
+---
+###### `fun <A> Doc<A>.dGuillemetsOut(): Doc<A>`
+
+```kotlin:ank
+"·".text().dGuillemetsOut()
+```
+
+---
+###### `fun <A> Doc<A>.dGuillemetsIn(): Doc<A>`
+
+```kotlin:ank
+"·".text().dGuillemetsIn()
+```
+
+---
+###### `fun <A> Doc<A>.sGuillemetsOut(): Doc<A>`
+
+```kotlin:ank
+"·".text().sGuillemetsOut()
+```
+
+---
+###### `fun <A> Doc<A>.sGuillemetsIn(): Doc<A>`
+
+```kotlin:ank
+"·".text().sGuillemetsIn()
+```
+
+---
+### Named characters
+
+Some constants for ascii and unicode characters
+
+#### ASCII
+
+Constants for ASCII characters can be found [here](https://github.com/1Jajen1/kotlin-pretty/blob/master/kotlin-pretty/src/main/kotlin/pretty/symbols/Ascii.kt).
+
+#### Unicode
+
+Constants for uncode characters can be found [here](https://github.com/1Jajen1/kotlin-pretty/blob/master/kotlin-pretty/src/main/kotlin/pretty/symbols/Unicode.kt).
 
 ### Annotations
 
-### Optimization
+Combinators that deal with annotations. Learn more about annotations [here](TODO).
+
+###### `fun <A> Doc<A>.annotate(a: A): Doc<A>`
+
+Add an annotation to a document. This can be used to supply additional context to the renderer, e.g. color. This is only relevant for documents that are rendered with a custom renderer. [renderString](TODO) and derivates will ignore annotations.
+
+---
+###### `fun <A> Doc<A>.unAnnotate(): Doc<Nothing>`
+
+Remove annotations from a document.
+
+---
+###### `fun <A, B> Doc<A>.reAnnotate(f: (A) -> B): Doc<B>`
+
+Alter annotations of a document.
+
+---
+###### `fun <A, B> Doc<A>.alterAnnotations(f: (A) -> List<B>): Doc<B>`
+
+Alter annotations of a document with the ability to either remove the annotation or add one or more annotations to the document.
 
 ## Operations on SimpleDoc
 
+Operations that use `SimpleDoc` instead of `Doc`. To learn more about `SimpleDoc` go [here](TODO).
+
 ### Layout
+
+
 
 ### Render

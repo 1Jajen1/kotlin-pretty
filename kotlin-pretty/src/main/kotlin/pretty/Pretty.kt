@@ -1,8 +1,10 @@
 package pretty
 
+import arrow.Kind
 import arrow.core.*
 import arrow.core.extensions.sequence.zip.zipWith
 import arrow.syntax.collections.tail
+import arrow.typeclasses.Foldable
 import arrow.core.extensions.sequence.repeat.repeat as repeatSeq
 import pretty.doc.functor.functor
 import pretty.symbols.*
@@ -87,6 +89,8 @@ fun <A> column(f: (Int) -> Doc<A>): Doc<A> = Doc(Eval.now(DocF.Column(f)))
 
 fun <A> nesting(f: (Int) -> Doc<A>): Doc<A> = Doc(Eval.now(DocF.Nesting(f)))
 
+fun <A> pageWidth(f: (PageWidth) -> Doc<A>): Doc<A> = Doc(Eval.now(DocF.WithPageWidth(f)))
+
 fun <A> Doc<A>.flatAlt(other: Doc<A>): Doc<A> = Doc(Eval.now(DocF.FlatAlt(this, other)))
 
 fun <A> Doc<A>.annotate(ann: A): Doc<A> = Doc(Eval.now(DocF.Annotated(ann, this)))
@@ -165,6 +169,12 @@ fun <A> List<Doc<A>>.punctuate(p: Doc<A>): List<Doc<A>> = when {
     else -> (first() toT tail()).let { (x, xs) ->
         listOf(x + p) + xs.punctuate(p)
     }
+}
+
+fun <F, A> Kind<F, Doc<A>>.foldDoc(FF: Foldable<F>, f: (Doc<A>, Doc<A>) -> Doc<A>): Doc<A> = FF.run {
+    foldRight<Doc<A>, Doc<A>>(Eval.now(nil())) { v, acc ->
+        acc.map { f(v, it) }
+    }.value()
 }
 
 fun <A> List<Doc<A>>.foldDoc(f: (Doc<A>, Doc<A>) -> Doc<A>): Doc<A> = when {

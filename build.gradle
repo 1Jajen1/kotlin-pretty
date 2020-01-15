@@ -9,6 +9,7 @@ buildscript {
         maven {
             url "https://plugins.gradle.org/m2/"
         }
+        maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
     }
     dependencies {
         classpath "me.champeau.gradle:jmh-gradle-plugin:0.5.0"
