@@ -19,7 +19,7 @@ fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLe
             is SimpleDocF.Nil -> true
             is SimpleDocF.Line -> true
         }
-    avail.fold({ true }, { w -> test(w) })
+    avail.fold({ hasFail().not() }, { w -> test(w) })
 }
 
 fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { pw, minNest, avail ->
@@ -37,7 +37,7 @@ fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLei
                 else -> true
             }
         }
-    avail.fold({ true }, { w -> test(pw, minNest, w) })
+    avail.fold({ hasFail().not() }, { w -> test(pw, minNest, w) })
 }
 
 fun <A> Doc<A>.layoutWadlerLeijen(
@@ -125,4 +125,13 @@ fun <A> SimpleDoc<A>.startsWithLine(): Eval<Boolean> = unDoc.flatMap {
         is SimpleDocF.RemoveAnnotation -> dF.doc.startsWithLine()
         else -> Eval.now(false)
     }
+}
+
+tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc.value()) {
+    is SimpleDocF.Fail -> true
+    is SimpleDocF.Nil -> false
+    is SimpleDocF.RemoveAnnotation -> dF.doc.hasFail()
+    is SimpleDocF.AddAnnotation -> dF.doc.hasFail()
+    is SimpleDocF.Line -> dF.doc.hasFail()
+    is SimpleDocF.Text -> dF.doc.hasFail()
 }
