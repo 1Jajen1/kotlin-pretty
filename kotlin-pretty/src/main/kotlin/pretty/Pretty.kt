@@ -2,6 +2,7 @@ package pretty
 
 import arrow.Kind
 import arrow.core.*
+import arrow.core.extensions.list.foldable.foldRight
 import arrow.core.extensions.sequence.zip.zipWith
 import arrow.syntax.collections.tail
 import arrow.typeclasses.Foldable
@@ -36,21 +37,21 @@ fun <A> Doc<A>.group(): Doc<A> = changesUponFlattening().fold({ this }, {
 })
 
 fun <A> Doc<A>.changesUponFlattening(): Option<Doc<A>> {
-    tailrec fun go(d: Doc<A>, cont: (Option<Doc<A>>) -> Option<Doc<A>>): Option<Doc<A>> =
-        when (val dF = d.unDoc.value()) {
-            is DocF.FlatAlt -> cont(dF.r.flatten().some())
-            is DocF.Line -> cont(Doc<A>(Eval.now(DocF.Fail)).some())
-            is DocF.Union -> go(dF.l, AndThen(cont).compose { it.orElse { dF.l.some() } })
-            is DocF.Nest -> go(dF.doc, AndThen(cont).compose { it.map { Doc(Eval.now(DocF.Nest(dF.i, it))) } })
-            is DocF.Annotated -> go(dF.doc, AndThen(cont).compose { it.map { Doc(Eval.now(DocF.Annotated(dF.ann, it))) } })
+    fun Doc<A>.go(): Eval<Option<Doc<A>>> =
+        when (val dF = unDoc.value()) {
+            is DocF.FlatAlt -> Eval.now(dF.r.flatten().some())
+            is DocF.Line -> Eval.now(Doc<A>(Eval.now(DocF.Fail)).some())
+            is DocF.Union -> Eval.now(dF.l.flatten().some())
+            is DocF.Nest -> dF.doc.go().map { it.map { Doc(Eval.now(DocF.Nest(dF.i, it))) } }
+            is DocF.Annotated -> dF.doc.go().map { it.map { Doc(Eval.now(DocF.Annotated(dF.ann, it))) } }
 
-            is DocF.Column -> cont(Doc(Eval.now(DocF.Column(AndThen(dF.doc).andThen { it.flatten() }))).some())
-            is DocF.Nesting -> cont(Doc(Eval.now(DocF.Nesting(AndThen(dF.doc).andThen { it.flatten() }))).some())
-            is DocF.WithPageWidth -> cont(Doc(Eval.now(DocF.WithPageWidth(AndThen(dF.doc).andThen { it.flatten() }))).some())
+            is DocF.Column -> Eval.now(Doc(Eval.now(DocF.Column(AndThen(dF.doc).andThen { it.flatten() }))).some())
+            is DocF.Nesting -> Eval.now(Doc(Eval.now(DocF.Nesting(AndThen(dF.doc).andThen { it.flatten() }))).some())
+            is DocF.WithPageWidth -> Eval.now(Doc(Eval.now(DocF.WithPageWidth(AndThen(dF.doc).andThen { it.flatten() }))).some())
 
             is DocF.Combined -> {
-                val lEval = Eval.later { go(dF.l, ::identity) }
-                val rEval = Eval.later { go(dF.r, ::identity) }
+                val lEval = Eval.defer { dF.l.go() }
+                val rEval = Eval.defer { dF.r.go() }
                 lEval.flatMap { l -> l.fold({
                     rEval.map { r -> r.fold({ None }, { rD ->
                         Doc(Eval.now(DocF.Combined(dF.l, rD))).some()
@@ -61,27 +62,26 @@ fun <A> Doc<A>.changesUponFlattening(): Option<Doc<A>> {
                     }, { rD ->
                         Doc(Eval.now(DocF.Combined(lD, rD))).some()
                     }) }
-                }) }.value().let(cont)
+                }) }
             }
 
-            else -> cont(None)
+            else -> Eval.now(None)
         }
 
-    return go(this, ::identity)
+    return go().value()
 }
 
-fun <A> Doc<A>.flatten(): Doc<A> = Doc(Eval.later {
-    when (val dF = unDoc.value()) {
-        is DocF.FlatAlt -> dF.r.flatten().unDoc.value()
-        is DocF.Union -> dF.l.flatten().unDoc.value()
-        is DocF.Line -> DocF.Fail
-        is DocF.Annotated -> DocF.Annotated(dF.ann, dF.doc.flatten())
-        is DocF.Combined -> DocF.Combined(dF.l.flatten(), dF.r.flatten())
-        is DocF.Nest -> DocF.Nest(dF.i, dF.doc.flatten())
-        is DocF.Column -> DocF.Column(AndThen(dF.doc).andThen { it.flatten() })
-        is DocF.Nesting -> DocF.Nesting(AndThen(dF.doc).andThen { it.flatten() })
-        is DocF.WithPageWidth -> DocF.WithPageWidth(AndThen(dF.doc).andThen { it.flatten() })
-        else -> dF
+fun <A> Doc<A>.flatten(): Doc<A> = Doc(unDoc.flatMap {
+    when (it) {
+        is DocF.FlatAlt -> it.r.flatten().unDoc
+        is DocF.Union -> it.l.flatten().unDoc
+        is DocF.Nest -> Eval.now(it.copy(doc = it.doc.flatten()))
+        is DocF.Combined -> Eval.now(it.copy(l = it.l.flatten(), r = it.r.flatten()))
+        is DocF.Annotated -> Eval.now(it.copy(doc = it.doc.flatten()))
+        is DocF.WithPageWidth -> Eval.now(DocF.WithPageWidth(AndThen(it.doc).andThen { it.flatten() }))
+        is DocF.Column -> Eval.now(DocF.Column(AndThen(it.doc).andThen { it.flatten() }))
+        is DocF.Nesting -> Eval.now(DocF.Nesting(AndThen(it.doc).andThen { it.flatten() }))
+        else -> Eval.now(it)
     }
 })
 
@@ -99,7 +99,24 @@ fun <A, B> Doc<A>.reAnnotate(f: (A) -> B): Doc<B> = Doc.functor().run {
     map(f).fix()
 }
 
-fun <A, B> Doc<A>.alterAnnotations(f: (A) -> List<B>): Doc<B> = TODO()
+fun <A, B> Doc<A>.alterAnnotations(f: (A) -> List<B>): Doc<B> = Doc(unDoc.flatMap {
+    when (it) {
+        is DocF.Annotated -> f(it.ann).foldRight(Eval.now(it.doc.alterAnnotations(f))) { v, acc ->
+            acc.map { it.annotate(v) }
+        }.value().unDoc
+        is DocF.Text -> Eval.now(DocF.Text(it.str))
+        is DocF.Union -> Eval.now(DocF.Union(it.l.alterAnnotations(f), it.r.alterAnnotations(f)))
+        is DocF.Combined -> Eval.now(DocF.Combined(it.l.alterAnnotations(f), it.r.alterAnnotations(f)))
+        is DocF.WithPageWidth -> Eval.now(DocF.WithPageWidth(AndThen(it.doc).andThen { it.alterAnnotations(f) }))
+        is DocF.Column -> Eval.now(DocF.Column(AndThen(it.doc).andThen { it.alterAnnotations(f) }))
+        is DocF.Nesting -> Eval.now(DocF.Nesting(AndThen(it.doc).andThen { it.alterAnnotations(f) }))
+        is DocF.Nest -> Eval.now(DocF.Nest(it.i, it.doc.alterAnnotations(f)))
+        is DocF.FlatAlt -> Eval.now(DocF.FlatAlt(it.l.alterAnnotations(f), it.r.alterAnnotations(f)))
+        is DocF.Line -> Eval.now(DocF.Line)
+        is DocF.Nil -> Eval.now(DocF.Nil)
+        is DocF.Fail -> Eval.now(DocF.Fail)
+    }
+})
 
 fun <A> Doc<A>.unAnnotate(): Doc<Nothing> = alterAnnotations { emptyList<Nothing>() }
 

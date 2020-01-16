@@ -2,18 +2,12 @@ package pretty
 
 import arrow.Kind
 import arrow.Kind2
-import arrow.core.*
-import arrow.core.extensions.option.applicative.applicative
+import arrow.core.AndThen
+import arrow.core.Eval
+import arrow.core.extensions.eval.applicative.applicative
 import arrow.extension
-import arrow.free.*
-import arrow.free.extensions.free.monad.monad
-import arrow.recursion.coelgotM
-import arrow.recursion.elgotM
-import arrow.recursion.typeclasses.Birecursive
 import arrow.typeclasses.*
-import pretty.doc.birecursive.birecursive
 import pretty.doc.semigroup.semigroup
-import pretty.docf.functor.functor
 
 class ForDocF private constructor()
 typealias DocFOf<A, F> = Kind<DocFPartialOf<A>, F>
@@ -26,14 +20,14 @@ sealed class DocF<out A, out F> : DocFOf<A, F> {
     object Fail : DocF<Nothing, Nothing>()
     object Line : DocF<Nothing, Nothing>()
     data class Text<A>(val str: String) : DocF<A, Nothing>()
-    data class Union<A, F>(val l: F, val r: F) : DocF<A, F>()
-    data class Combined<A, F>(val l: F, val r: F) : DocF<A, F>()
-    data class Nest<A, F>(val i: Int, val doc: F) : DocF<A, F>()
-    data class Column<A, F>(val doc: (Int) -> F) : DocF<A, F>()
-    data class Nesting<A, F>(val doc: (Int) -> F) : DocF<A, F>()
-    data class FlatAlt<A, F>(val l: F, val r: F) : DocF<A, F>()
+    data class Union<F>(val l: F, val r: F) : DocF<Nothing, F>()
+    data class Combined<F>(val l: F, val r: F) : DocF<Nothing, F>()
+    data class Nest<F>(val i: Int, val doc: F) : DocF<Nothing, F>()
+    data class Column<F>(val doc: (Int) -> F) : DocF<Nothing, F>()
+    data class Nesting<F>(val doc: (Int) -> F) : DocF<Nothing, F>()
+    data class FlatAlt<F>(val l: F, val r: F) : DocF<Nothing, F>()
     data class Annotated<A, F>(val ann: A, val doc: F) : DocF<A, F>()
-    data class WithPageWidth<A, F>(val doc: (PageWidth) -> F) : DocF<A, F>()
+    data class WithPageWidth<F>(val doc: (PageWidth) -> F) : DocF<Nothing, F>()
 
     fun <B> map(f: (F) -> B): DocF<A, B> = when (this) {
         is Nil -> Nil
@@ -96,26 +90,27 @@ operator fun <A> Doc<A>.plus(other: Doc<A>): Doc<A> = Doc.semigroup<A>().run {
 
 @extension
 interface DocFunctor : Functor<ForDoc> {
-    override fun <A, B> Kind<ForDoc, A>.map(f: (A) -> B): Kind<ForDoc, B> =
-        TODO()
-}
-
-@extension
-interface DocBirecursive<A> : Birecursive<Doc<A>, DocFPartialOf<A>> {
-    override fun FF(): Functor<DocFPartialOf<A>> = DocF.functor()
-    override fun Kind<DocFPartialOf<A>, Doc<A>>.embedT(): Doc<A> = Doc(Eval.now(fix()))
-    override fun Doc<A>.projectT(): Kind<DocFPartialOf<A>, Doc<A>> = unDoc.value()
+    override fun <A, B> Kind<ForDoc, A>.map(f: (A) -> B): Kind<ForDoc, B> = Doc<B>(fix().unDoc.map {
+        when (it) {
+            is DocF.Annotated -> DocF.Annotated(f(it.ann), it.doc.map(f).fix())
+            is DocF.Union -> DocF.Union(it.l.map(f).fix(), it.r.map(f).fix())
+            is DocF.Nest -> DocF.Nest(it.i, it.doc.map(f).fix())
+            is DocF.FlatAlt -> DocF.FlatAlt(it.l.map(f).fix(), it.r.map(f).fix())
+            is DocF.Nesting -> DocF.Nesting(AndThen(it.doc).andThen { it.map(f).fix() })
+            is DocF.Column -> DocF.Column(AndThen(it.doc).andThen { it.map(f).fix() })
+            is DocF.WithPageWidth -> DocF.WithPageWidth(AndThen(it.doc).andThen { it.map(f).fix() })
+            is DocF.Combined -> DocF.Combined(it.l.map(f).fix(), it.r.map(f).fix())
+            is DocF.Text -> DocF.Text(it.str)
+            is DocF.Fail -> DocF.Fail
+            is DocF.Nil -> DocF.Nil
+            is DocF.Line -> DocF.Line
+        }
+    })
 }
 
 @extension
 interface DocSemigroup<A> : Semigroup<Doc<A>> {
-    override fun Doc<A>.combine(b: Doc<A>): Doc<A> = when (val dF = unDoc.value()) {
-        is DocF.Text -> when (val dFF = b.unDoc.value()) {
-            is DocF.Text -> Doc(Eval.now(DocF.Text(dF.str + dFF.str)))
-            else -> Doc(Eval.now(DocF.Combined(this, b)))
-        }
-        else -> Doc(Eval.now(DocF.Combined(this, b)))
-    }
+    override fun Doc<A>.combine(b: Doc<A>): Doc<A> = Doc(Eval.now(DocF.Combined(this, b)))
 }
 
 @extension
@@ -127,3 +122,60 @@ interface DocMonoid<A> : Monoid<Doc<A>>, DocSemigroup<A> {
 interface DocShow<A> : Show<Doc<A>> {
     override fun Doc<A>.show(): String = renderPretty().renderString()
 }
+
+fun <A> Doc<A>.fuse(shallow: Boolean): Doc<A> = Doc(unDoc.flatMap {
+    when (it) {
+        is DocF.Combined -> it.l.unDoc.flatMap { l ->
+            when (l) {
+                is DocF.Nil -> it.r.unDoc
+                is DocF.Text -> it.r.unDoc.flatMap { r ->
+                    when (r) {
+                        is DocF.Nil -> Eval.now(l)
+                        is DocF.Text -> Eval.now(DocF.Text(l.str + r.str))
+                        is DocF.Combined -> r.l.unDoc.map { rl ->
+                            when (rl) {
+                                is DocF.Nil -> DocF.Combined(
+                                    Doc(Eval.now(DocF.Text(l.str))), r.r
+                                )
+                                is DocF.Text -> DocF.Combined(
+                                    Doc(Eval.now(DocF.Text(l.str + rl.str))), r.r
+                                )
+                                else -> DocF.Combined(it.l, it.r.fuse(shallow))
+                            }
+                        }
+                        else -> Eval.now(DocF.Combined(it.l, it.r.fuse(shallow)))
+                    }
+                }
+                is DocF.Combined -> l.r.unDoc.flatMap { lr ->
+                    if (lr is DocF.Text)
+                        Doc(Eval.now(DocF.Combined(l.l, Doc(Eval.now(DocF.Combined(l.r, it.r))))))
+                            .fuse(shallow).unDoc
+                    else Eval.now(it)
+                }
+                else -> Eval.now(it)
+            }
+        }
+        is DocF.Nest ->
+            if (it.i == 0) it.doc.unDoc
+            else it.doc.unDoc.map { mn ->
+                if (mn is DocF.Nest) DocF.Nest(it.i + mn.i, mn.doc)
+                else mn
+            }
+        is DocF.Annotated -> it.doc.unDoc.map {
+            if (it is DocF.Nil) DocF.Nil
+            else it
+        }
+        is DocF.FlatAlt -> Eval.later {
+            DocF.FlatAlt(it.l.fuse(shallow), it.r.fuse(shallow))
+        }
+        is DocF.Union -> Eval.later {
+            DocF.Union(it.l.fuse(shallow), it.r.fuse(shallow))
+        }
+        else -> if (shallow) Eval.now(it) else when (it) {
+            is DocF.WithPageWidth -> Eval.now(DocF.WithPageWidth(AndThen(it.doc).andThen { it.fuse(false) }))
+            is DocF.Nesting -> Eval.now(DocF.Nesting(AndThen(it.doc).andThen { it.fuse(false) }))
+            is DocF.Column -> Eval.now(DocF.Column(AndThen(it.doc).andThen { it.fuse(false) }))
+            else -> Eval.now(it)
+        }
+    }
+})

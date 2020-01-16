@@ -28,6 +28,16 @@ class DocTest : PropertySpec({
             }
         }
     }
+    "layoutCompact should never render to a document that contains a fail"(Args(maxSuccess = 10_000)) {
+        forAll(Doc.arbitrary(String.arbitrary()), Show { "<Doc>" }) { doc ->
+            forAll(PageWidth.arbitrary()) { pw ->
+                val sDoc = doc.layoutCompact()
+                val hasFail = sDoc.hasFail().not()
+
+                hasFail
+            }
+        }
+    }
 })
 
 tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc.value()) {

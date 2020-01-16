@@ -1,8 +1,12 @@
 package pretty
 
-import arrow.core.MapK
-import arrow.core.Nel
-import arrow.core.toT
+import arrow.Kind
+import arrow.core.*
+import arrow.core.extensions.id.applicative.applicative
+import arrow.core.extensions.monoid
+import arrow.syntax.collections.tail
+import arrow.typeclasses.Applicative
+import arrow.typeclasses.Monoid
 import org.openjdk.jmh.annotations.*
 import pretty.symbols.lParen
 import pretty.symbols.rParen
@@ -15,36 +19,8 @@ import propCheck.instances.mapk.arbitrary.arbitrary
 import propCheck.instances.nonemptylist.arbitrary.arbitrary
 import java.util.concurrent.TimeUnit
 
-@State(Scope.Benchmark)
-@BenchmarkMode(Mode.AverageTime)
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
-class LargeDoc {
-
-    val largeDoc = programGen().unGen(RandSeed(1) toT 100).show()
-
-    @Benchmark
-    fun layoutPretty(): Unit {
-        return largeDoc.layoutPretty(PageWidth.default())
-            .evaluate()
-    }
-
-    @Benchmark
-    fun layoutSmart(): Unit {
-        return largeDoc.layoutSmart(PageWidth.default())
-            .evaluate()
-    }
-}
-
-// Fully evaluate a SimpleDoc forcing all evals.
-tailrec fun <A> SimpleDoc<A>.evaluate(): Unit = when (val dF = unDoc.value()) {
-    is SimpleDocF.Text -> dF.doc.evaluate()
-    is SimpleDocF.Line -> dF.doc.evaluate()
-    is SimpleDocF.AddAnnotation -> dF.doc.evaluate()
-    is SimpleDocF.RemoveAnnotation -> dF.doc.evaluate()
-    else -> Unit
-}
+// TODO Move each benchmark to their own files and add more layout related benchmarks
+// TODO add catamorphism benchmarks after those have been reworked
 
 
 // https://github.com/quchen/prettyprinter/blob/master/prettyprinter/bench/LargeOutput.hs

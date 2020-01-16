@@ -47,7 +47,7 @@ fun <A> Doc<A>.layoutWadlerLeijen(
     fun selectNicer(lineLen: Int, currCol: Int, x: SimpleDoc<A>, y: SimpleDoc<A>): SimpleDoc<A> =
         if (x.fits(
                 pageWidth,
-                if (y.startsWithLine().value()) lineLen else currCol,
+                if (y.startsWithLine()) lineLen else currCol,
                 Option.fx {
                     val colsLeft = !(when (pageWidth) {
                         is PageWidth.Available -> (pageWidth.maxWidth - currCol).some()
@@ -68,6 +68,8 @@ fun <A> Doc<A>.layoutWadlerLeijen(
                 })
         ) x else y
 
+    // TODO Benchmark this against cata
+    // TODO Add tests how lazy this is, or if laziness is a benefit to Doc at all
     fun lBest(nl: Int, cc: Int, xs: List<Option<Tuple2<Int, Doc<A>>>>): SimpleDoc<A> = SimpleDoc(Eval.defer {
         if (xs.isEmpty()) Eval.now(SimpleDocF.Nil)
         else xs.first().fold({ Eval.later { SimpleDocF.RemoveAnnotation(lBest(nl, cc, xs.tail())) } }, { (i, fst) ->
@@ -118,14 +120,40 @@ fun <A> Doc<A>.layoutWadlerLeijen(
     return lBest(0, 0, listOf((0 toT this).some()))
 }
 
-fun <A> SimpleDoc<A>.startsWithLine(): Eval<Boolean> = unDoc.flatMap {
-    when (val dF = it) {
-        is SimpleDocF.Line -> Eval.now(true)
+fun <A> Doc<A>.layoutCompact(): SimpleDoc<A> {
+    fun scan(i: Int, ls: List<Doc<A>>): SimpleDoc<A> =
+        if (ls.isEmpty()) SimpleDoc.nil()
+        else {
+            val (x, xs) = (ls.first() toT ls.tail())
+            SimpleDoc(
+                x.unDoc.flatMap {
+                    when (val dF = it) {
+                        is DocF.Line -> Eval.now(SimpleDocF.Line(0, scan(0, xs)))
+                        is DocF.Fail -> Eval.now(SimpleDocF.Fail)
+                        is DocF.Text -> Eval.now(SimpleDocF.Text(dF.str, scan(i + dF.str.length, xs)))
+                        is DocF.Nil -> scan(i, xs).unDoc
+                        is DocF.FlatAlt -> scan(i, listOf(dF.l) + xs).unDoc
+                        is DocF.Combined -> scan(i, listOf(dF.l, dF.r) + xs).unDoc
+                        is DocF.Union -> scan(i, listOf(dF.r) + xs).unDoc
+                        is DocF.Nest -> scan(i, listOf(dF.doc) + xs).unDoc
+                        is DocF.Annotated -> scan(i, listOf(dF.doc) + xs).unDoc
+                        is DocF.Column -> scan(i, listOf(dF.doc(i)) + xs).unDoc
+                        is DocF.Nesting -> scan(i, listOf(dF.doc(0)) + xs).unDoc
+                        is DocF.WithPageWidth -> scan(i, listOf(dF.doc(PageWidth.Unbounded)) + xs).unDoc
+                    }
+                }
+            )
+        }
+    return scan(0, listOf(this))
+}
+
+tailrec fun <A> SimpleDoc<A>.startsWithLine(): Boolean =
+    when (val dF = unDoc.value()) {
+        is SimpleDocF.Line -> true
         is SimpleDocF.AddAnnotation -> dF.doc.startsWithLine()
         is SimpleDocF.RemoveAnnotation -> dF.doc.startsWithLine()
-        else -> Eval.now(false)
+        else -> false
     }
-}
 
 tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc.value()) {
     is SimpleDocF.Fail -> true

@@ -114,16 +114,16 @@ data class SimpleDoc<out A>(val unDoc: Eval<SimpleDocF<A, SimpleDoc<A>>>) : Simp
     }
 }
 
-operator fun <A> SimpleDoc<A>.plus(b: SimpleDoc<A>): SimpleDoc<A> = cata {
+operator fun <A> SimpleDoc<A>.plus(b: SimpleDoc<A>): SimpleDoc<A> = SimpleDoc(unDoc.map {
     when (it) {
-        is SimpleDocF.Nil -> b
-        is SimpleDocF.Text -> when (val rdF = it.doc.unDoc.value()) {
-            is SimpleDocF.Text -> SimpleDoc.text(it.str + rdF.str, rdF.doc)
-            else -> SimpleDoc(Eval.now(it))
-        }
-        else -> SimpleDoc(Eval.now(it))
+        is SimpleDocF.Nil -> b.unDoc.value()
+        is SimpleDocF.Fail -> SimpleDocF.Fail
+        is SimpleDocF.Text -> it.copy(doc = it.doc + b)
+        is SimpleDocF.Line -> it.copy(doc = it.doc + b)
+        is SimpleDocF.AddAnnotation -> it.copy(doc = it.doc + b)
+        is SimpleDocF.RemoveAnnotation -> it.copy(doc = it.doc + b)
     }
-    }
+})
 
 @extension
 interface SimpleDocEq<A> : Eq<SimpleDoc<A>> {
@@ -160,13 +160,19 @@ interface SimpleDocShow<A> : Show<SimpleDoc<A>> {
 
 @extension
 interface SimpleDocFunctor : Functor<ForSimpleDoc> {
-    override fun <A, B> Kind<ForSimpleDoc, A>.map(f: (A) -> B): Kind<ForSimpleDoc, B> = fix().cata {
-        when (it) {
-            is SimpleDocF.AddAnnotation -> SimpleDoc.addAnnotation(f(it.ann), it.doc.fix())
-            else -> SimpleDoc(Eval.now(it.fix() as SimpleDocF<B, SimpleDoc<B>>))
-            // safe because cata went through all of them
-        }
-    }
+    override fun <A, B> Kind<ForSimpleDoc, A>.map(f: (A) -> B): Kind<ForSimpleDoc, B> =
+        SimpleDoc(fix().unDoc.map {
+            when (it) {
+                is SimpleDocF.AddAnnotation ->
+                    SimpleDocF.AddAnnotation(f(it.ann), it.doc.map(f).fix())
+                is SimpleDocF.RemoveAnnotation ->
+                    SimpleDocF.RemoveAnnotation(it.doc.map(f).fix())
+                is SimpleDocF.Line -> SimpleDocF.Line(it.i, it.doc.map(f).fix())
+                is SimpleDocF.Text -> SimpleDocF.Text(it.str, it.doc.map(f).fix())
+                is SimpleDocF.Nil -> SimpleDocF.Nil
+                is SimpleDocF.Fail -> SimpleDocF.Fail
+            }
+        })
 }
 
 @extension
@@ -214,12 +220,4 @@ fun <F, A, B> SimpleDoc<A>.renderDecoratedA(
         })
     }
     return go(emptyList(), ::identity)
-}
-
-fun <A, B> SimpleDoc<A>.cata(f: (SimpleDocF<A, B>) -> B): B = SimpleDoc.birecursive<A>().run {
-    cataM<FreePartialOf<ForFunction0>, B>(SimpleDocF.traverse(), Free.monad()) { Trampoline.later { f(it.fix()) } }.fix().runT()
-}
-
-fun <A, B> SimpleDoc<A>.para(f: (SimpleDocF<A, Tuple2<SimpleDoc<A>, B>>) -> B): B = SimpleDoc.birecursive<A>().run {
-    paraM<FreePartialOf<ForFunction0>, B>(SimpleDocF.traverse(), Free.monad()) { Trampoline.later { f(it.fix()) } }.fix().runT()
 }
