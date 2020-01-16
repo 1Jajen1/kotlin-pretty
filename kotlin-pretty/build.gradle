@@ -33,6 +33,10 @@ allOpen {
     annotation("org.openjdk.jmh.annotations.BenchmarkMode")
 }
 
+jmh {
+    duplicateClassesStrategy = 'warn'
+}
+
 test {
     useJUnitPlatform()
 }

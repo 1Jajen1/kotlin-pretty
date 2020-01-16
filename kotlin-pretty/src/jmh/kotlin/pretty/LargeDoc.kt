@@ -15,31 +15,24 @@ import propCheck.instances.mapk.arbitrary.arbitrary
 import propCheck.instances.nonemptylist.arbitrary.arbitrary
 import java.util.concurrent.TimeUnit
 
+@State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
-@OutputTimeUnit(TimeUnit.NANOSECONDS)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 class LargeDoc {
 
-    @State(Scope.Benchmark)
-    class DocState {
-        lateinit var largeDoc: Doc<Nothing>
-
-        @Setup(Level.Iteration)
-        fun setup() {
-            largeDoc = programGen().unGen(RandSeed(1) toT 60).show()
-        }
-    }
+    val largeDoc = programGen().unGen(RandSeed(1) toT 100).show()
 
     @Benchmark
-    fun layoutPretty(s: DocState): Unit {
-        return s.largeDoc.layoutPretty(PageWidth.default())
+    fun layoutPretty(): Unit {
+        return largeDoc.layoutPretty(PageWidth.default())
             .evaluate()
     }
 
     @Benchmark
-    fun layoutSmart(s: DocState): Unit {
-        return s.largeDoc.layoutSmart(PageWidth.default())
+    fun layoutSmart(): Unit {
+        return largeDoc.layoutSmart(PageWidth.default())
             .evaluate()
     }
 }
