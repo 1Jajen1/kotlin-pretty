@@ -138,7 +138,7 @@ fun <A> Doc<A>.fuse(shallow: Boolean): Doc<A> = Doc(unDoc.flatMap {
                                     Doc(Eval.now(DocF.Text(l.str))), r.r
                                 )
                                 is DocF.Text -> DocF.Combined(
-                                    Doc(Eval.now(DocF.Text(l.str + rl.str))), r.r
+                                    Doc(Eval.now(DocF.Text(l.str + rl.str))), r.r.fuse(shallow)
                                 )
                                 else -> DocF.Combined(it.l, it.r.fuse(shallow))
                             }
@@ -159,11 +159,10 @@ fun <A> Doc<A>.fuse(shallow: Boolean): Doc<A> = Doc(unDoc.flatMap {
             if (it.i == 0) it.doc.unDoc
             else it.doc.unDoc.map { mn ->
                 if (mn is DocF.Nest) DocF.Nest(it.i + mn.i, mn.doc)
-                else mn
+                else DocF.Nest(it.i, it.doc)
             }
-        is DocF.Annotated -> it.doc.unDoc.map {
-            if (it is DocF.Nil) DocF.Nil
-            else it
+        is DocF.Annotated -> Eval.later {
+            DocF.Annotated(it.ann, it.doc.fuse(shallow))
         }
         is DocF.FlatAlt -> Eval.later {
             DocF.FlatAlt(it.l.fuse(shallow), it.r.fuse(shallow))

@@ -33,8 +33,8 @@ interface DocArbitrary<A> : Arbitrary<Doc<A>> {
     override fun arbitrary(): Gen<Doc<A>> = genDoc<A>(AA().arbitrary())
 
     override fun shrink(fail: Doc<A>): Sequence<Doc<A>> = (
-            (if ((fail.unDoc.value() is DocF.Fail).not())
-                sequenceOf(Doc(Eval.now(DocF.Fail)))
+            (if ((fail.unDoc.value() is DocF.Fail).not()) emptySequence()
+                // sequenceOf(Doc(Eval.now(DocF.Fail)))
             else emptySequence<Doc<A>>()) +
                     when (val dF = fail.unDoc.value()) {
                         is DocF.Fail, is DocF.Nil, is DocF.Line -> emptySequence()
@@ -95,8 +95,8 @@ fun <A> genRec(genA: Gen<A>): Gen<Doc<A>> = Gen.frequency(
     3 toT columnGen(genA),
     3 toT nestingGen(genA),
     3 toT withPageWidthGen(genA),
-    1 toT unionGen(genA),
-    1 toT failGen<A>(genA)
+    1 toT unionGen(genA)
+    // 1 toT failGen<A>(genA)
 )
 
 fun <A> combineGen(genA: Gen<A>): Gen<Doc<A>> = Gen.applicative().map(
