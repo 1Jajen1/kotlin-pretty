@@ -30,6 +30,7 @@ compileJmhKotlin {
 
 allOpen {
     annotation("org.openjdk.jmh.annotations.State")
+    annotation("org.openjdk.jmh.annotations.BenchmarkMode")
 }
 
 test {

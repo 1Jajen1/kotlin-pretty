@@ -25,6 +25,7 @@ interface PageWidthArbitrary : Arbitrary<PageWidth> {
     )
 }
 
+// TODO rewrite this with actual operations sooner or later
 @extension
 interface DocArbitrary<A> : Arbitrary<Doc<A>> {
     fun AA(): Arbitrary<A>
@@ -69,12 +70,16 @@ fun <A> genDoc(genA: Gen<A>): Gen<Doc<A>> = Gen.sized { depth ->
 fun <A> genTerminal(): Gen<Doc<A>> = Gen.frequency(
     10 toT textGen<A>(),
     5 toT nilGen<A>(),
-    5 toT lineGen<A>(),
-    1 toT failGen<A>()
+    5 toT lineGen<A>()
 )
 
 fun <A> nilGen(): Gen<Doc<A>> = Gen.elements(nil())
-fun <A> failGen(): Gen<Doc<A>> = Gen.elements(Doc(Eval.now(DocF.Fail)))
+
+// generate a fail, but only as the first element of a union because there is actually
+//  no combinator that can generate a fail on the right side
+fun <A> failGen(genA: Gen<A>): Gen<Doc<A>> =
+    genDoc(genA).map { Doc(Eval.now(DocF.Union(Doc(Eval.now(DocF.Fail)), it))) }
+
 fun <A> textGen(): Gen<Doc<A>> = arbitraryUnicodeString()
     .map { it.filter { it != '\n' }.text() }
 
@@ -90,7 +95,8 @@ fun <A> genRec(genA: Gen<A>): Gen<Doc<A>> = Gen.frequency(
     3 toT columnGen(genA),
     3 toT nestingGen(genA),
     3 toT withPageWidthGen(genA),
-    1 toT unionGen(genA)
+    1 toT unionGen(genA),
+    1 toT failGen<A>(genA)
 )
 
 fun <A> combineGen(genA: Gen<A>): Gen<Doc<A>> = Gen.applicative().map(

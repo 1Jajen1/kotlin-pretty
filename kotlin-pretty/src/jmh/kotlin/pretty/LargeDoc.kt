@@ -3,6 +3,7 @@ package pretty
 import arrow.core.MapK
 import arrow.core.Nel
 import arrow.core.toT
+import org.openjdk.jmh.annotations.*
 import pretty.symbols.lParen
 import pretty.symbols.rParen
 import pretty.symbols.space
@@ -12,6 +13,46 @@ import propCheck.arbitrary.gen.monad.monad
 import propCheck.instances.arbitrary
 import propCheck.instances.mapk.arbitrary.arbitrary
 import propCheck.instances.nonemptylist.arbitrary.arbitrary
+import java.util.concurrent.TimeUnit
+
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.NANOSECONDS)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+class LargeDoc {
+
+    @State(Scope.Benchmark)
+    class DocState {
+        lateinit var largeDoc: Doc<Nothing>
+
+        @Setup(Level.Iteration)
+        fun setup() {
+            largeDoc = programGen().unGen(RandSeed(1) toT 60).show()
+        }
+    }
+
+    @Benchmark
+    fun layoutPretty(s: DocState): Unit {
+        return s.largeDoc.layoutPretty(PageWidth.default())
+            .evaluate()
+    }
+
+    @Benchmark
+    fun layoutSmart(s: DocState): Unit {
+        return s.largeDoc.layoutSmart(PageWidth.default())
+            .evaluate()
+    }
+}
+
+// Fully evaluate a SimpleDoc forcing all evals.
+tailrec fun <A> SimpleDoc<A>.evaluate(): Unit = when (val dF = unDoc.value()) {
+    is SimpleDocF.Text -> dF.doc.evaluate()
+    is SimpleDocF.Line -> dF.doc.evaluate()
+    is SimpleDocF.AddAnnotation -> dF.doc.evaluate()
+    is SimpleDocF.RemoveAnnotation -> dF.doc.evaluate()
+    else -> Unit
+}
+
 
 // https://github.com/quchen/prettyprinter/blob/master/prettyprinter/bench/LargeOutput.hs
 data class Program(val unProgram: Binds)
