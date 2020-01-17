@@ -1,4 +1,4 @@
-# kotlin-prettify [ ![Download](https://api.bintray.com/packages/jannis/kotlin-pretty/kotlin-pretty/images/download.svg) ](https://bintray.com/jannis/kotlin-pretty/kotlin-pretty/_latestVersion)
+# kotlin-pretty [ ![Download](https://api.bintray.com/packages/jannis/kotlin-pretty/kotlin-pretty/images/download.svg) ](https://bintray.com/jannis/kotlin-pretty/kotlin-pretty/_latestVersion)
 > A pretty printer library for kotlin
 
 Kotlin-pretty is an extensible and easy to use pretty-printing library for kotlin. It can be used to render dynamic text in a size constrained environment (e.g. a terminal, message boxes, etc) in a human readable and (hopefully) pretty way.
