@@ -22,7 +22,7 @@ pygmentsStyle = "github"
 
 [languages]
 [languages.en]
-title = "Kotlin pretty - Easy to use, powerful and extensible prettyprinter"
+title = "Kotlin pretty - A prettyprinter library for kotlin"
 description = "Documentation for kotlin-pretty"
 languageName ="English"
 # Weight used for sorting.
