@@ -6,14 +6,8 @@ import arrow.core.*
 import arrow.core.extensions.id.applicative.applicative
 import arrow.core.extensions.monoid
 import arrow.extension
-import arrow.free.*
-import arrow.free.extensions.free.monad.monad
-import arrow.recursion.typeclasses.Birecursive
 import arrow.syntax.collections.tail
 import arrow.typeclasses.*
-import pretty.simpledoc.birecursive.birecursive
-import pretty.simpledocf.functor.functor
-import pretty.simpledocf.traverse.traverse
 
 class ForSimpleDocF private constructor()
 typealias SimpleDocFOf<A, F> = Kind<SimpleDocFPartialOf<A>, F>
@@ -46,7 +40,7 @@ interface SimpleDocFFunctor<C> : Functor<SimpleDocFPartialOf<C>> {
 }
 
 @extension
-interface SimpleDocFTraverse<C> : Traverse<SimpleDocFPartialOf<C>> {
+interface SimpleDocFFoldable<C> : Foldable<SimpleDocFPartialOf<C>> {
     override fun <A, B> Kind<SimpleDocFPartialOf<C>, A>.foldLeft(b: B, f: (B, A) -> B): B =
         when (val it = fix()) {
             is SimpleDocF.Fail -> b
@@ -66,7 +60,10 @@ interface SimpleDocFTraverse<C> : Traverse<SimpleDocFPartialOf<C>> {
             is SimpleDocF.AddAnnotation -> f(it.doc, lb)
             is SimpleDocF.RemoveAnnotation -> f(it.doc, lb)
         }
+}
 
+@extension
+interface SimpleDocFTraverse<C> : Traverse<SimpleDocFPartialOf<C>>, SimpleDocFFoldable<C> {
     override fun <G, A, B> Kind<SimpleDocFPartialOf<C>, A>.traverse(
         AP: Applicative<G>,
         f: (A) -> Kind<G, B>
@@ -126,8 +123,20 @@ operator fun <A> SimpleDoc<A>.plus(b: SimpleDoc<A>): SimpleDoc<A> = SimpleDoc(un
 })
 
 @extension
+interface SimpleDocSemigroup<A> : Semigroup<SimpleDoc<A>> {
+    override fun SimpleDoc<A>.combine(b: SimpleDoc<A>): SimpleDoc<A> = plus(b)
+}
+
+@extension
+interface SimpleDocMonoid<A> : Monoid<SimpleDoc<A>>, SimpleDocSemigroup<A> {
+    override fun empty(): SimpleDoc<A> = SimpleDoc.nil()
+}
+
+@extension
 interface SimpleDocEq<A> : Eq<SimpleDoc<A>> {
     fun EQA(): Eq<A>
+
+    // TODO this may not be stacksafe
     override fun SimpleDoc<A>.eqv(b: SimpleDoc<A>): Boolean = when (val dF = unDoc.value()) {
         is SimpleDocF.Fail -> b.unDoc.value() is SimpleDocF.Fail
         is SimpleDocF.Nil -> b.unDoc.value() is SimpleDocF.Nil
@@ -173,13 +182,6 @@ interface SimpleDocFunctor : Functor<ForSimpleDoc> {
                 is SimpleDocF.Fail -> SimpleDocF.Fail
             }
         })
-}
-
-@extension
-interface SimpleDocBirecursive<A> : Birecursive<SimpleDoc<A>, SimpleDocFPartialOf<A>> {
-    override fun FF(): Functor<SimpleDocFPartialOf<A>> = SimpleDocF.functor()
-    override fun Kind<SimpleDocFPartialOf<A>, SimpleDoc<A>>.embedT(): SimpleDoc<A> = SimpleDoc(Eval.now(this.fix()))
-    override fun SimpleDoc<A>.projectT(): Kind<SimpleDocFPartialOf<A>, SimpleDoc<A>> = unDoc.value()
 }
 
 // TODO Benchmark this against cata, a version with a string builder and a direct version

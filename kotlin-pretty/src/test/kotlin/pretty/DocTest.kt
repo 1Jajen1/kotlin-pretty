@@ -15,7 +15,7 @@ import propCheck.instances.arbitrary
 import propCheck.testresult.testable.testable
 
 class DocTest : PropertySpec({
-    "layoutPretty should never render to a document that contains a fail"(Args(maxSuccess = 10_000)) {
+    "layoutPretty should never render to a document that contains a fail"(Args(maxSuccess = 1_000)) {
         forAll(Doc.arbitrary(String.arbitrary()), Show { "<Doc>" }) { doc ->
             forAll(PageWidth.arbitrary()) { pw ->
                 val sDoc = doc.layoutPretty(PageWidth.default())
@@ -25,7 +25,7 @@ class DocTest : PropertySpec({
             }
         }
     }
-    "layoutSmart should never render to a document that contains a fail"(Args(maxSuccess = 10_000)) {
+    "layoutSmart should never render to a document that contains a fail"(Args(maxSuccess = 1_000)) {
         forAll(Doc.arbitrary(String.arbitrary()), Show { "<Doc>" }) { doc ->
             forAll(PageWidth.arbitrary()) { pw ->
                 val sDoc = doc.layoutSmart(PageWidth.default())
@@ -35,7 +35,7 @@ class DocTest : PropertySpec({
             }
         }
     }
-    "layoutCompact should never render to a document that contains a fail"(Args(maxSuccess = 10_000)) {
+    "layoutCompact should never render to a document that contains a fail"(Args(maxSuccess = 1_000)) {
         forAll(Doc.arbitrary(String.arbitrary()), Show { "<Doc>" }) { doc ->
             forAll(PageWidth.arbitrary()) { pw ->
                 val sDoc = doc.layoutCompact()
