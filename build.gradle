@@ -25,10 +25,11 @@ apply plugin: 'kotlin'
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    runtime "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion"
-    compile "org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion"
-    implementation ("io.arrow-kt:arrow-ank:$arrow_version")
-    runtime ("io.arrow-kt:arrow-ank:$arrow_version")
+
+    runtimeOnly "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion"
+    runtimeOnly "org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion"
+    runtimeOnly "io.arrow-kt:arrow-ank:$arrow_version"
+
     implementation project(":kotlin-pretty")
     implementation project(":kotlin-pretty-ansi")
 }
