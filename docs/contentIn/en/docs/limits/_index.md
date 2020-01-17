@@ -7,4 +7,6 @@ description: >
     This describes possible uses and also limitations of kotlin-pretty.
 ---
 
-Hello world?
+{{% pageinfo %}}
+This section is not yet done.
+{{% /pageinfo %}}

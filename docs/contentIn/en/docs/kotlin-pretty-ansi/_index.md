@@ -7,4 +7,6 @@ description: >
     This is a comprehensive reference of all methods that kotlin-pretty provides.
 ---
 
-Hello world?
+{{% pageinfo %}}
+This section is not yet done.
+{{% /pageinfo %}}

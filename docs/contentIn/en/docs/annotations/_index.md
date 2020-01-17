@@ -7,4 +7,6 @@ description: >
     A how-to-guide that explains using annotations.
 ---
 
-Hello world?
+{{% pageinfo %}}
+This section is not yet done. You may want to check the annotation section in the api reference.
+{{% /pageinfo %}}

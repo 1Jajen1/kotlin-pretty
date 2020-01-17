@@ -651,6 +651,15 @@ The default layout algorithm which calculates a layout for a document.
 ###### `fun Doc<A>.layoutSmart(pw: PageWidth): SimpleDoc<A>`
 
 A layout algorithm which uses more lookahead than [layoutPretty](TODO). It is slightly slower, but can produce nicer results.
+```kotlin:ank
+fun <A> Doc<A>.f(): Doc<A> = (("fun(".text() softLineBreak this) + rParen()).hang(2)
+val lSmartDoc = listOf("exempli".text(), "gratia".text()).list().align().f().f().f().f().f()
+val hr = pipe() + "------------------------".text() + pipe()
+listOf(hr, lSmartDoc, hr).vSep().layoutPretty(PageWidth.Available(26, 1F)).renderString()
+```
+```kotlin:ank
+listOf(hr, lSmartDoc, hr).vSep().layoutSmart(PageWidth.Available(26, 1F)).renderString()
+```
 
 ---
 ### Render
