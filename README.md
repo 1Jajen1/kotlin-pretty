@@ -4,7 +4,6 @@
 Kotlin-pretty is an extensible and easy to use pretty-printing library for kotlin. It can be used to render dynamic text in a size constrained environment (e.g. a terminal, message boxes, etc) in a human readable and (hopefully) pretty way.
 
 ## Motivation
----
 
 Usuall when outputting text (for example output from tests or debugging (usually `toString` output) or rendering information for users) we have two scenarios:
 - We have static text
@@ -19,7 +18,6 @@ A prettyprinter can help with both of those situations, by taking away the size 
 The use cases span from terminal output, to static size constraints on user interfaces, to code layout, to rendering and presenting users data in readable fashion, etc. Basically everwhere where dynamic text meets a possible size constraint.
 
 ## How prettyprinters solve these problems
----
 
 In kotlin-pretty we provide a datatype `Doc` which represents a rich text document with some sort of layout. There is a large set of combinators to help modify the content and the resutling layout of a document. In the end this document can be layed out by simple algorithm's, provided by kotlin-pretty, and rendered as `String`, directly to output handles or however you may want as there are easy ways to change and influence the rendering method.
 
