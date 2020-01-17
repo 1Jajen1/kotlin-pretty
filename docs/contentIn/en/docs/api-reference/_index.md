@@ -23,7 +23,7 @@ Primitives and simple combinators to create and alter documents:
 
 ###### `fun nil(): Doc<Nothing>`
 
-Creates an empty document. The resulting document still has a height of 1. So in combination with e.g. [vCat](TODO) it can still render as a newline.
+Creates an empty document. The resulting document still has a height of 1. So in combination with e.g. [vCat]({{< relref "#fun-a-listdocavcat-doca" >}}) it can still render as a newline.
 ```kotlin:ank
 listOf("hello".text(), nil(), "world".text()).vCat()
 ```
@@ -32,7 +32,7 @@ listOf("hello".text(), nil(), "world".text()).vCat()
 ###### `fun String.text(): Doc<Nothing>`
 
 Create a document which contains the string as text.
-> The string should never contain newlines as that would lead to unwanted behaviour. If it can contain newlines, use [doc()](./#fun-stringdoc-docnothing) instead.
+> The string should never contain newlines as that would lead to unwanted behaviour. If it can contain newlines, use [doc]({{< relref "#fun-stringdoc-docnothing" >}}) instead.
 
 ---
 ###### `fun String.doc(): Doc<Nothing>`
@@ -46,7 +46,7 @@ This document advances the layout to the next line and sets the indentation to t
 ```kotlin:ank
 "This is rendered in".text() + line() + "two lines".text()
 ```
-If inside a [group()](./#fun-a-docagroup-doca) the newline can be undone and replaced by a space.
+If inside a [group]({{< relref "#fun-a-docagroup-doca" >}}) the newline can be undone and replaced by a space.
 
 ---
 ###### `fun lineBreak(): Doc<Nothing>`
@@ -55,7 +55,7 @@ This document advances the layout to the next line and sets the indentation to t
 ```kotlin:ank
 "This is rendered in".text() + lineBreak() + "two lines".text()
 ```
-If inside a [group()](./#fun-a-docagroup-doca) the newline can be undone and replaced by [nil()](./#fun-nil-docnothing).
+If inside a [group]({{< relref "#fun-a-docagroup-doca" >}}) the newline can be undone and replaced by [nil]({{< relref "#fun-nil-docnothing" >}}).
 
 ---
 ###### `fun softLine(): Doc<Nothing>`
@@ -74,7 +74,7 @@ softLine() == line().group()
 ---
 ###### `fun softLineBreak(): Doc<Nothing>`
 
-softLineBreak behavious like [nil()](./#fun-nil-docnothing) if the layout fits, otherwise like a newline.
+softLineBreak behavious like [nil]({{< relref "#fun-nil-docnothing" >}}) if the layout fits, otherwise like a newline.
 ```kotlin:ank
 ("This is rendered in".text() + softLineBreak() + "one line".text()).pretty(maxWidth = 80)
 ```
@@ -88,7 +88,7 @@ softLineBreak() == lineBreak().group()
 ---
 ###### `fun hardLine(): Doc<Nothing>`
 
-Insert a new line which cannot be flattened by [group](./#fun-a-docagroup-doca).
+Insert a new line which cannot be flattened by [group]({{< relref "#fun-a-docagroup-doca" >}}).
 
 ---
 ###### `fun <A> Doc<A>.nest(i: Int): Doc<A>`
@@ -98,16 +98,16 @@ Change the layout of a document by increasing the indentation level (of the foll
 listOf(listOf("Hello".text(), "World".text()).vCat().nest(4), "!".text()).vCat()
 ```
 See also:
-- [hang](TODO) nest relative to the current cursor position, instead of the current nesting level
-- [align](TODO) set nesting level to the current cursor position
-- [indent](TODO) directly increase indentation padded with spaces
+- [hang]({{< relref "#fun-a-docahangi-int-doca" >}}) nest relative to the current cursor position, instead of the current nesting level
+- [align]({{< relref "#fun-a-docaalign-doca" >}}) set nesting level to the current cursor position
+- [indent]({{< relref "#fun-a-docaindenti-int-doca" >}}) directly increase indentation padded with spaces
 
 ---
 ###### `fun <A> Doc<A>.group(): Doc<A>`
 
 Group tries to flatten a document to a single line. If this fails (on hardLine's) or does not fit, the document will be layed out unchanged. This function is the key to building adapting layouts.
 
-See [vCat](TODO), [line](./#fun-line-docnothing), [flatAlt](TODO) for examples.
+See [vCat]({{< relref "#fun-a-listdocavcat-doca" >}}), [line]({{< relref "#fun-a-docalineother-doca-doca" >}}), [flatAlt]({{< relref "#fun-a-docaflataltfallback-doca-doca" >}}) for examples.
 
 ---
 ###### `fun <A> Doc<A>.flatAlt(fallback: Doc<A>): Doc<A>`
@@ -121,7 +121,7 @@ lineBreak() == hardLine().flatAlt(nil())
 ---
 ### Alignment
 
-This section describes functions that can align their output relative to the current cursor position as opposed to [nest](TODO) which always aligns to the current nesting level. This means that in terms of the Wadler-Leijen algorithm (which is what is used to layout the document), these functions do not produce an optimal result. They are however immensly useful in practice. Some of these functions are also more expensive to use at the top level, but should be fine in most cases.
+This section describes functions that can align their output relative to the current cursor position as opposed to [nest]({{< relref "#fun-a-docanesti-int-doca" >}}) which always aligns to the current nesting level. This means that in terms of the Wadler-Leijen algorithm (which is what is used to layout the document), these functions do not produce an optimal result. They are however immensly useful in practice. Some of these functions are also more expensive to use at the top level, but should be fine in most cases.
 
 ###### `fun <A> Doc<A>.align(): Doc<A>`
 
@@ -172,12 +172,12 @@ encloseSep.pretty(maxWidth = 80)
 encloseSep.pretty(maxWidth = 10)
 ```
 
-If you want to put the separator as a suffix, take a look at [puncuate](TODO).
+If you want to put the separator as a suffix, take a look at [puncuate]({{< relref "#fun-a-listdocapunctuatep-doca-listdoca" >}}).
 
 ---
 ###### `fun <A> List<Doc<A>>.list(): Doc<A>`
 
-Variant of [encloseSep](TODO) for list-like output.
+Variant of [encloseSep]({{< relref "#fun-a-listdocaenclosesepleft-doca-right-doca-sep-doca-doca" >}}) for list-like output.
 ```kotlin:ank
 val listDoc = listOf(1.doc(), 10.doc(), 100.doc(), 1000.doc(), 10000.doc()).list()
 listDoc.pretty(maxWidth = 80)
@@ -189,7 +189,7 @@ listDoc.pretty(maxWidth = 10)
 ---
 ###### `fun <A> List<Doc<A>>.tupled(): Doc<A>`
 
-Variant of [encloseSep](TODO) for tuple-like output.
+Variant of [encloseSep]({{< relref "#fun-a-listdocaenclosesepleft-doca-right-doca-sep-doca-doca" >}}) for tuple-like output.
 ```kotlin:ank
 val tupleDoc = listOf(1.doc(), 10.doc(), 100.doc(), 1000.doc(), 10000.doc()).tupled()
 tupleDoc.pretty(maxWidth = 80)
@@ -201,7 +201,7 @@ tupleDoc.pretty(maxWidth = 10)
 ---
 ###### `fun <A> List<Doc<A>>.semiBraces(): Doc<A>`
 
-Variant of [encloseSep](TODO) for braced output.
+Variant of [encloseSep]({{< relref "#fun-a-listdocaenclosesepleft-doca-right-doca-sep-doca-doca" >}}) for braced output.
 ```kotlin:ank
 val bracedDoc = listOf(1.doc(), 10.doc(), 100.doc(), 1000.doc(), 10000.doc()).semiBraces()
 bracedDoc.pretty(maxWidth = 80)
@@ -231,7 +231,7 @@ Concatenate two documents with a space in between.
 ---
 ###### `fun <A> Doc<A>.line(other: Doc<A>): Doc<A>` 
 
-Concatenate two documents with a [line](TODO) in between.
+Concatenate two documents with a [line]({{< relref "#fun-a-docalineother-doca-doca" >}}) in between.
 ```kotlin:ank
 "Hello".text() line "world".text()
 ```
@@ -239,7 +239,7 @@ Concatenate two documents with a [line](TODO) in between.
 ---
 ###### `fun <A> Doc<A>.lineBreak(other: Doc<A>): Doc<A>`
 
-Concatenate two documents with a [lineBreak](TODO) in between.
+Concatenate two documents with a [lineBreak]({{< relref "#fun-linebreak-docnothing" >}}) in between.
 ```kotlin:ank
 "Hello".text() lineBreak "world".text()
 ```
@@ -247,7 +247,7 @@ Concatenate two documents with a [lineBreak](TODO) in between.
 ---
 ###### `fun <A> Doc<A>.softLine(other: Doc<A>): Doc<A>` 
 
-Concatenate two documents with a [softLine](TODO) in between.
+Concatenate two documents with a [softLine]({{< relref "#fun-softline-docnothing" >}}) in between.
 ```kotlin:ank
 "Hello".text() softLine "world".text()
 ```
@@ -255,7 +255,7 @@ Concatenate two documents with a [softLine](TODO) in between.
 ---
 ###### `fun <A> Doc<A>.softLineBreak(other: Doc<A>): Doc<A>`
 
-Concatenate two documents with a [softLineBreak](TODO) in between.
+Concatenate two documents with a [softLineBreak]({{< relref "#fun-softlinebreak-docnothing" >}}) in between.
 ```kotlin:ank
 "Hello ".text() softLineBreak "world".text()
 ```
@@ -263,7 +263,7 @@ Concatenate two documents with a [softLineBreak](TODO) in between.
 ---
 ### List
 
-These functions generalize working over lists of documents. They are separated into two families: `sep` and `cat` where `sep` uses [line](TODO) and `cat` uses [lineBreak](TODO) to separate content.
+These functions generalize working over lists of documents. They are separated into two families: `sep` and `cat` where `sep` uses [line]({{< relref "#fun-a-docalineother-doca-doca" >}}) and `cat` uses [lineBreak]({{< relref "#fun-linebreak-docnothing" >}}) to separate content.
 
 ###### `fun <A> List<Doc<A>>.foldDoc(f: (Doc<A>, Doc<A>) -> Doc<A>): Doc<A>`
 
@@ -272,16 +272,16 @@ Concatenate the documents in a list given a binary function `f`. Almost all othe
 ---
 ###### `fun <F, A> Kind<F, Doc<A>>.foldDoc(FF: Foldable<F>, f: (Doc<A>, Doc<A>) -> Doc<A>): Doc<A>`
 
-Kind polymorphic version of [foldDoc](TODO) that allows folding any foldable structure.
+Kind polymorphic version of [foldDoc]({{< relref "#fun-a-listdocafolddocf-doca-doca---doca-doca" >}}) that allows folding any foldable structure.
 
 ---
 #### Sep
 
-Functions from this list will use [line](TODO) to insert linebreaks. This means it when used with [group](TODO) they will be replaced by spaces.
+Functions from this list will use [line]({{< relref "#fun-a-docalineother-doca-doca" >}}) to insert linebreaks. This means it when used with [group]({{< relref "#fun-a-docagroup-doca" >}}) they will be replaced by spaces.
 
 ###### `fun <A> List<Doc<A>>.hSep(): Doc<A>`
 
-Concatenate all documents using [spaced](TODO). This never introduces newlines on its own.
+Concatenate all documents using [spaced]({{< relref "#fun-a-docaspacedother-doca-doca" >}}). This never introduces newlines on its own.
 ```kotlin:ank
 val hSepDoc = listOf("Hello".text(), "there!".text(), "- Kenobi".text()).hSep()
 hSepDoc.pretty(maxWidth = 80)
@@ -289,12 +289,12 @@ hSepDoc.pretty(maxWidth = 80)
 ```kotlin:ank
 hSepDoc.pretty(maxWidth = 10)
 ```
-For a layout that automatically adds linebreaks, consider [fillSep](TODO) instead.
+For a layout that automatically adds linebreaks, consider [fillSep]({{< relref "#fun-a-listdocafillsep-doca" >}}) instead.
 
 ---
 ###### `fun <A> List<Doc<A>>.vSep(): Doc<A>`
 
-Concatenate all documents vertically using [line](TODO).
+Concatenate all documents vertically using [line]({{< relref "#fun-a-docalineother-doca-doca" >}}).
 ```kotlin:ank
 val vSepDoc = listOf("Text".text(), "to".text(), "lay".text(), "out".text()).vSep()
 "prefix".text() spaced vSepDoc
@@ -302,12 +302,12 @@ val vSepDoc = listOf("Text".text(), "to".text(), "lay".text(), "out".text()).vSe
 ```kotlin:ank
 "prefix".text() spaced vSepDoc.align()
 ```
-Because later grouping a `vSep` is so common, [sep](TODO) is a built-in which does that.
+Because later grouping a `vSep` is so common, [sep]({{< relref "#fun-a-listdocasep-doca" >}}) is a built-in which does that.
 
 ---
 ###### `fun <A> List<Doc<A>>.fillSep(): Doc<A>`
 
-Concatenate all documents with [softLine](TODO). The resulting document will be as wide as possible, but introduce newlines if it no longer fits.
+Concatenate all documents with [softLine]({{< relref "#fun-a-docasoftlineother-doca-doca" >}}). The resulting document will be as wide as possible, but introduce newlines if it no longer fits.
 ```kotlin:ank
 val fillSepDoc = listOf(
     "Very".text(), "long".text(), "text".text(),
@@ -323,7 +323,7 @@ fillSepDoc.pretty(maxWidth = 40)
 ---
 ###### `fun <A> List<Doc<A>>.sep(): Doc<A>`
 
-Concatenate all documents with [softLine](TODO), but calls [group](TODO) on the resulting document to flatten it. This is different from [vSep] because it tries to lay out horizontally first, instead of just vertically. This is also different from [fillSep](TODO), because it will also flatten the individual documents instead of just the separator.
+Concatenate all documents with [softLine]({{< relref "#fun-a-docasoftlineother-doca-doca" >}}), but calls [group]({{< relref "#fun-a-docagroup-doca" >}}) on the resulting document to flatten it. This is different from [vSep] because it tries to lay out horizontally first, instead of just vertically. This is also different from [fillSep]({{< relref "#fun-a-listdocafillsep-doca" >}}), because it will also flatten the individual documents instead of just the separator.
 ```kotlin:ank
 val sepDoc = listOf("Text".text() line "that".text(), "spans".text(), "multiple".text(), "lines".text()).sep()
 sepDoc.pretty(maxWidth = 80)
@@ -335,11 +335,11 @@ sepDoc.pretty(maxWidth = 20)
 ---
 #### Cat
 
-Functions from this list will use [lineBreak](TODO) to insert linebreaks. This means it when used with [group](TODO) they will be replaced by [nil](TODO).
+Functions from this list will use [lineBreak]({{< relref "#fun-linebreak-docnothing" >}}) to insert linebreaks. This means it when used with [group]({{< relref "#fun-a-docagroup-doca" >}}) they will be replaced by [nil]({{< relref "#fun-nil-docnothing" >}}).
 
-###### `fun <A> List<Doc<A>>.hSep(): Doc<A>`
+###### `fun <A> List<Doc<A>>.hCat(): Doc<A>`
 
-Concatenate all documents using [plus](TODO). This never introduces newlines on its own.
+Concatenate all documents using [plus]({{< relref "#fun-a-docaplusother-doca-doca" >}}). This never introduces newlines on its own.
 ```kotlin:ank
 val hCatDoc = listOf("Hello".text(), "there!".text(), "- Kenobi".text()).hCat()
 hCatDoc.pretty(maxWidth = 80)
@@ -347,12 +347,12 @@ hCatDoc.pretty(maxWidth = 80)
 ```kotlin:ank
 hCatDoc.pretty(maxWidth = 10)
 ```
-For a layout that automatically adds linebreaks, consider [fillCat](TODO) instead.
+For a layout that automatically adds linebreaks, consider [fillCat]({{< relref "#fun-a-listdocafillcat-doca" >}}) instead.
 
 ---
-###### `fun <A> List<Doc<A>>.vSep(): Doc<A>`
+###### `fun <A> List<Doc<A>>.vCat(): Doc<A>`
 
-Concatenate all documents vertically using [lineBreak](TODO).
+Concatenate all documents vertically using [lineBreak]({{< relref "#fun-a-docalinebreakother-doca-doca" >}}).
 ```kotlin:ank
 val vCatDoc = listOf("Text".text(), "to".text(), "lay".text(), "out".text()).vCat()
 "prefix".text() spaced vCatDoc
@@ -360,12 +360,12 @@ val vCatDoc = listOf("Text".text(), "to".text(), "lay".text(), "out".text()).vCa
 ```kotlin:ank
 "prefix".text() spaced vCatDoc.align()
 ```
-Because later grouping a `vCat` is so common, [cat](TODO) is a built-in which does that.
+Because later grouping a `vCat` is so common, [cat](({{< relref "#fun-a-listdocacat-doca" >}})) is a built-in which does that.
 
 ---
-###### `fun <A> List<Doc<A>>.fillSep(): Doc<A>`
+###### `fun <A> List<Doc<A>>.fillCat(): Doc<A>`
 
-Concatenate all documents with [softLineBreak](TODO). The resulting document will be as wide as possible, but introduce newlines if it no longer fits.
+Concatenate all documents with [softLineBreak](#fun-a-docasoftlinebreakother-doca-doca). The resulting document will be as wide as possible, but introduce newlines if it no longer fits.
 ```kotlin:ank
 val fillCatDoc = listOf(
     "Very".text(), "long".text(), "text".text(),
@@ -381,7 +381,7 @@ fillCatDoc.pretty(maxWidth = 40)
 ---
 ###### `fun <A> List<Doc<A>>.cat(): Doc<A>`
 
-Concatenate all documents with [softLineBreak](TODO), but calls [group](TODO) on the resulting document to flatten it. This is different from [vCat] because it tries to lay out horizontally first, instead of just vertically. This is also different from [fillCat](TODO), because it will also flatten the individual documents instead of just the separator.
+Concatenate all documents with [softLineBreak](#fun-a-docasoftlinebreakother-doca-doca), but calls [group]({{< relref "#fun-a-docagroup-doca" >}}) on the resulting document to flatten it. This is different from [vCat]({{< relref "#fun-a-listdocavcat-doca" >}}) because it tries to lay out horizontally first, instead of just vertically. This is also different from [fillCat]({{< relref "#fun-a-listdocafillcat-doca" >}}), because it will also flatten the individual documents instead of just the separator.
 ```kotlin:ank
 val catDoc = listOf("Text".text() line "that".text(), "spans".text(), "multiple".text(), "lines".text()).cat()
 catDoc.pretty(maxWidth = 80)
@@ -404,7 +404,7 @@ punctuateDoc.hSep().pretty(maxWidth = 80)
 ```kotlin:ank
 punctuateDoc.vSep().pretty(maxWidth = 20)
 ```
-If you want to but elements infront of the documents you should use [encloseSep](TODO).
+If you want to but elements infront of the documents you should use [encloseSep]({{< relref "#fun-a-listdocaenclosesepleft-doca-right-doca-sep-doca-doca" >}}).
 
 ---
 ### Reactive/conditional layouts
@@ -413,7 +413,7 @@ Layout documents with access to context such as the current position, the availa
 
 ###### `fun <A> column(f: (Int) -> Doc<A>): Doc<A>`
 
-Layout a document with information on what the current column is. Used to implement [align](TODO).
+Layout a document with information on what the current column is. Used to implement [align]({{< relref "#fun-a-docaalign-doca" >}}).
 ```kotlin:ank
 column { c -> "Columns are".text() spaced c.doc() + "-based".text() }
 ```
@@ -425,7 +425,7 @@ listOf(0, 4, 8).map { colDoc.indent(it) }.vSep()
 ---
 ###### `fun <A> nesting(f: (Int) -> Doc<A>): Doc<A>`
 
-Layout a document with information on what the current nesting is. Used to implement [align](TODO).
+Layout a document with information on what the current nesting is. Used to implement [align]({{< relref "#fun-a-docaalign-doca" >}}).
 ```kotlin:ank
 val nestingDoc = "prefix".text() spaced nesting { ("Nested:".text() spaced it.doc()).brackets() }
 listOf(0, 4, 8).map { nestingDoc.indent(it) }.vSep()
@@ -616,11 +616,11 @@ Constants for uncode characters can be found [here](https://github.com/1Jajen1/k
 
 ### Annotations
 
-Combinators that deal with annotations. Learn more about annotations [here](TODO).
+Combinators that deal with annotations. Learn more about annotations [here]({{< ref "/docs/annotations" >}}).
 
 ###### `fun <A> Doc<A>.annotate(a: A): Doc<A>`
 
-Add an annotation to a document. This can be used to supply additional context to the renderer, e.g. color. This is only relevant for documents that are rendered with a custom renderer. [renderString](TODO) and derivates will ignore annotations.
+Add an annotation to a document. This can be used to supply additional context to the renderer, e.g. color. This is only relevant for documents that are rendered with a custom renderer. [renderString]({{< relref "#fun-simpledocarenderstring-string" >}}) and derivates will ignore annotations.
 
 ---
 ###### `fun <A> Doc<A>.unAnnotate(): Doc<Nothing>`
@@ -637,6 +637,33 @@ Alter annotations of a document.
 
 Alter annotations of a document with the ability to either remove the annotation or add one or more annotations to the document.
 
+--
+
+### Utiltity
+
+###### `fun String.words(): List<Doc<Nothing>>`
+
+Split a string into single words and convert them to `Doc` using [doc]({{< relref "#fun-stringdoc-docnothing" >}}).
+```kotlin:ank
+"Hello world string".words().vSep()
+```
+
+---
+###### `fun String.reflow(): Doc<Nothing>`
+
+Replace spaces in a string with [softLine]({{< relref "#fun-softline-docnothing" >}}). This attempts to lay out the string as wide as possible, but introduces newlines when it exceeds max-width.
+```kotlin:ank
+"Hello world string that is slightly longer than normal".reflow()
+```
+
+---
+### Optimization
+
+###### `fun <A> Doc<A>.fuse(shallow: Boolean): Doc<A>`
+
+Fuse text nodes in a document if possible. If you document consists of many `"H".text() + "E".text() ...` operations, this will attempt to fuse the text together to reduce the overhead for the layout algorithm. If you use deep fusion `shallow => false`, this will also try to fuse documents returned by [column], [nesting] and [pageWidth]. A fused document is always equal to an unfused on when rendered. Benchmark your code to see if this benefits you or not!
+
+---
 ## Operations on SimpleDoc
 
 Operations that use `SimpleDoc` instead of `Doc`. To learn more about `SimpleDoc` go [here](TODO).
@@ -650,7 +677,7 @@ The default layout algorithm which calculates a layout for a document.
 ---
 ###### `fun Doc<A>.layoutSmart(pw: PageWidth): SimpleDoc<A>`
 
-A layout algorithm which uses more lookahead than [layoutPretty](TODO). It is slightly slower, but can produce nicer results.
+A layout algorithm which uses more lookahead than [layoutPretty]({{< relref "#fun-docalayoutprettypw-pagewidth-simpledoca" >}}). It is slightly slower, but can produce nicer results.
 ```kotlin:ank
 fun <A> Doc<A>.f(): Doc<A> = (("fun(".text() softLineBreak this) + rParen()).hang(2)
 val lSmartDoc = listOf("exempli".text(), "gratia".text()).list().align().f().f().f().f().f()
@@ -662,6 +689,11 @@ listOf(hr, lSmartDoc, hr).vSep().layoutSmart(PageWidth.Available(26, 1F)).render
 ```
 
 ---
+###### `fun Doc<A>.layoutCompact(): SimpleDoc<A>`
+
+A very simple layout algorithm that lays out a document with no extra newlines or indentation. This is useful to render into machine-readable formats.
+
+---
 ### Render
 
 ###### `fun SimpleDoc<A>.renderString(): String`
@@ -671,9 +703,9 @@ Render a simple doc as a string. Ignores annotations.
 ---
 ###### `fun <A, B> SimpleDoc<A>.renderDecorated(MO: Monoid<B>, text: (String) -> B, addAnn: (A) -> B, removeAnn: (A) -> B): B`
 
-Helper to implement basic renders that handle annotations. This takes a [Monoid](TODO), which in short is a combine operation and an empty element for a given datatype (e.g. `StringMonoid = { empty = "", combine = (a: String, b: String) -> a + b }`). Also this should hold a few invariants: `empty + x == x`, `x + empty == x` and `a + (b + c) == (a + b) + c`. The other parameters are functions which handle either text or the addition or removal of an annotation.
+Helper to implement basic renders that handle annotations. This takes a [Monoid](https://arrow-kt.io/docs/arrow/typeclasses/monoid/), which in short is a combine operation and an empty element for a given datatype (e.g. `StringMonoid = { empty = "", combine = (a: String, b: String) -> a + b }`). Also this should hold a few invariants: `empty + x == x`, `x + empty == x` and `a + (b + c) == (a + b) + c`. The other parameters are functions which handle either text or the addition or removal of an annotation.
 
-For example [renderString](TODO) is defined as:
+For example [renderString]({{< relref "#fun-simpledocarenderstring-string" >}}) is defined as:
 ```kotlin:ank:silent
 import arrow.core.identity
 import arrow.core.extensions.monoid
@@ -689,4 +721,4 @@ fun <A> SimpleDoc<A>.renderString(): String =
 ---
 ###### `fun <A, B> SimpleDoc<A>.renderDecoratedA(AP: Applicative<F>, MO: Monoid<B>, text: (String) -> Kind<F, B>, addAnn: (A) -> Kind<F, B>, removeAnn: (A) -> Kind<F, B>): B`
 
-More general form of [renderDecorated](TODO). This allows in a purely functional way to do effects when rendering. This can mean keeping some state around, writing additional output or accessing inputs. If you value pure functions, this can also be used to render directly to an output handle in a purely functional way. [renderDecorated](TODO) is also defined as `renderDecoratedA` but using the `Id` applicative, which is the identity effect, i.e. it does nothing special on top of the default behaviour. 
+More general form of [renderDecorated]({{< relref "#fun-a-b-simpledocarenderdecoratedaap-applicativef-mo-monoidb-text-string---kindf-b-addann-a---kindf-b-removeann-a---kindf-b-b" >}}). This allows in a purely functional way to do effects when rendering. This can mean keeping some state around, writing additional output or accessing inputs. If you value pure functions, this can also be used to render directly to an output handle in a purely functional way. [renderDecorated]({{< relref "#fun-a-b-simpledocarenderdecoratedaap-applicativef-mo-monoidb-text-string---kindf-b-addann-a---kindf-b-removeann-a---kindf-b-b" >}}) is also defined as `renderDecoratedA` but using the `Id` applicative, which is the identity effect, i.e. it does nothing special on top of the default behaviour. 

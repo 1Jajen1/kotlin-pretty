@@ -20,13 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation "kotlin-pretty:kotlin-pretty:0.4.0"
+    implementation "kotlin-pretty:kotlin-pretty:0.5.0"
 }
 ```
 
 ## Rendering data
-
-> TODO API DOC REFERENCES
 
 In this section we will go over creating a very basic rich document for a datatype and how to render it. This will not be the prettiest or best layout possible, just a simple example to get started.
 
@@ -64,7 +62,7 @@ fun Pair<Int, Int>.prettyLineSpan(): Doc<Nothing> =
 
 There is a lot going on here, especially with all those infix functions, so let us go over it one by one:
 
-The type signature `ErrReport.doc()` hints that we return `Doc<Nothing>`, this means the resulting document is not annotated. The type parameter refers to annotations, you can learn more about that [here](TODO LINK). For now that is not important as we will not be using annotations yet.
+The type signature `ErrReport.doc()` hints that we return `Doc<Nothing>`, this means the resulting document is not annotated. The type parameter refers to annotations, you can learn more about that [here]({{< ref "/docs/annotations" >}}). For now that is not important as we will not be using annotations yet.
 
 Next up is `file.text()`: This calls the extension function `String.text(): Doc<Nothing>` which converts a string to an un-annotated document.
 > This method has an invariant that it will never be used on a string with a newline. If it is, it will break the layout algorithm and will not produce the best result. Use `String.doc()` instead which properly handles newlines, but comes at a performance cost.
@@ -125,6 +123,8 @@ With the larger max width the input stays on two lines and nicely fits the requi
 To make a better layout we should have presented the layout algorithm with more options by using something like `softline` which can be either a space or a newline. You can learn more about those other options in the other sections of the docs. 
 
 ## Whats next
+
+- [Api reference]({{< ref "/docs/api-reference" >}}) A documented list of most, if not all methods provided by kotlin-pretty.
 
 TODO add sections here:
 - How to guide
