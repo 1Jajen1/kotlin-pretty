@@ -15,7 +15,7 @@ buildscript {
         classpath "me.champeau.gradle:jmh-gradle-plugin:0.5.0"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
-        classpath "io.arrow-kt:arrow-ank-gradle:$arrow_version" // TODO update when 0.10.5 is out
+        classpath "io.arrow-kt:arrow-ank-gradle:$arrow_version"
     }
 }
 
@@ -25,11 +25,6 @@ apply plugin: 'kotlin'
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-
-    runtimeOnly "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion"
-    runtimeOnly "org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion"
-    runtimeOnly "io.arrow-kt:arrow-ank:$arrow_version"
-
     implementation project(":kotlin-pretty")
     implementation project(":kotlin-pretty-ansi")
 }
