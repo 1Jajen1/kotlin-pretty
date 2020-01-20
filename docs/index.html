@@ -31,7 +31,7 @@
 </span><span style=color:#998;font-style:italic></span><span style=color:#000;font-weight:700>val</span> pairDoc = pairs.map { (t, n) -&gt;
     <span style=color:#998;font-style:italic>// text is an alternate constructor to doc that should only be used if the String has no newlines
 </span><span style=color:#998;font-style:italic></span>    <span style=color:#998;font-style:italic>//  it offers better performance for larger texts
-</span><span style=color:#998;font-style:italic></span>    t.text().fill(<span style=color:#099>5</span>) spaced <span style=color:#d14>&#34;-&gt;&#34;</span>.text() spaced n.doc()
+</span><span style=color:#998;font-style:italic></span>    t.text().fill(<span style=color:#099>5</span>).flatAlt(t.text()) spaced <span style=color:#d14>&#34;-&gt;&#34;</span>.text() spaced n.doc()
 }.tupled() <span style=color:#998;font-style:italic>// enclose between parentheses and add leading comma
 </span></code></pre></div><div class=highlight><pre style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-kotlin data-lang=kotlin>nrDoc.pretty(maxWidth = <span style=color:#099>80</span>, ribbonWidth = <span style=color:#099>0.4F</span>)
 <span style=color:#998;font-style:italic>// [1, 2, 3, 4, 5, 1000]
@@ -43,7 +43,7 @@
 </span><span style=color:#998;font-style:italic></span><span style=color:#998;font-style:italic>// , 5
 </span><span style=color:#998;font-style:italic></span><span style=color:#998;font-style:italic>// , 1000] 
 </span></code></pre></div><div class=highlight><pre style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-kotlin data-lang=kotlin>pairDoc.pretty(maxWidth = <span style=color:#099>80</span>, ribbonWidth = <span style=color:#099>1F</span>)
-<span style=color:#998;font-style:italic>// (Hello -&gt; 1, World -&gt; 2, !     -&gt; 300)
+<span style=color:#998;font-style:italic>// (Hello -&gt; 1, World -&gt; 2, ! -&gt; 300)
 </span></code></pre></div><div class=highlight><pre style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-kotlin data-lang=kotlin>pairDoc.pretty(maxWidth = <span style=color:#099>20</span>, ribbonWidth = <span style=color:#099>1F</span>)
 <span style=color:#998;font-style:italic>// ( Hello -&gt; 1
 </span><span style=color:#998;font-style:italic></span><span style=color:#998;font-style:italic>// , World -&gt; 2
