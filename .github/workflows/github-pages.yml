@@ -34,6 +34,9 @@ jobs:
         hugo-version: '0.62.0'
         extended: true
 
+    - name: Wrapper validation
+      uses: gradle/wrapper-validation-action@v1
+
     - name: Ank
       run: |
         chmod +x gradlew
