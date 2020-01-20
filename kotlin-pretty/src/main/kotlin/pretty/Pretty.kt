@@ -41,7 +41,7 @@ fun <A> Doc<A>.changesUponFlattening(): Option<Doc<A>> {
         when (val dF = unDoc.value()) {
             is DocF.FlatAlt -> Eval.now(dF.r.flatten().some())
             is DocF.Line -> Eval.now(Doc<A>(Eval.now(DocF.Fail)).some())
-            is DocF.Union -> Eval.now(dF.l.flatten().some())
+            is DocF.Union -> Eval.now(dF.l.some())
             is DocF.Nest -> dF.doc.go().map { it.map { Doc(Eval.now(DocF.Nest(dF.i, it))) } }
             is DocF.Annotated -> dF.doc.go().map { it.map { Doc(Eval.now(DocF.Annotated(dF.ann, it))) } }
 
