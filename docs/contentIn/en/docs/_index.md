@@ -65,8 +65,8 @@ nrDoc.pretty(maxWidth = 80, ribbonWidth = 0.4F)
 nrDoc.pretty(maxWidth = 20, ribbonWidth = 0.4F)
 ```
 ```kotlin:ank
-pairDoc.pretty(maxWidth = 80, ribbonWidth = 0.4F)
+pairDoc.pretty(maxWidth = 80, ribbonWidth = 1F)
 ```
 ```kotlin:ank
-pairDoc.pretty(maxWidth = 20, ribbonWidth = 0.4F)
+pairDoc.pretty(maxWidth = 20, ribbonWidth = 1F)
 ```
