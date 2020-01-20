@@ -55,7 +55,7 @@ val nrDoc = nrList.map { it.doc() }.list() // enclose between brackets and add l
 val pairDoc = pairs.map { (t, n) ->
     // text is an alternate constructor to doc that should only be used if the String has no newlines
     //  it offers better performance for larger texts
-    t.text().fill(5).flatAlt(l.text()) spaced "->".text() spaced n.doc()
+    t.text().fill(5).flatAlt(t.text()) spaced "->".text() spaced n.doc()
 }.tupled() // enclose between parentheses and add leading comma
 ```
 ```kotlin:ank
