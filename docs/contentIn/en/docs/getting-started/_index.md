@@ -1,6 +1,6 @@
 ---
 title: "Getting started"
-date: 2020-01-14
+date: 2020-01-22
 weight: 10
 type: "docs"
 description: >
@@ -20,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    implementation "kotlin-pretty:kotlin-pretty:0.5.0"
+    implementation "kotlin-pretty:kotlin-pretty:0.5.1"
 }
 ```
 
