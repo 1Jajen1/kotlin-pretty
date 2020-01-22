@@ -7,7 +7,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
 
-typealias FittingFun<A> = SimpleDoc<A>.(pageWidth: PageWidth, minNesting: Int, availableWidth: Option<Int>) -> Boolean
+typealias FittingFun<A> = SimpleDoc<A>.(pageWidth: PageWidth, minNesting: Int, availableWidth: Int) -> Boolean
 
 fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { _, _, avail ->
     tailrec fun <A> SimpleDoc<A>.test(i: Int): Boolean =
@@ -19,7 +19,7 @@ fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLe
             is SimpleDocF.Nil -> true
             is SimpleDocF.Line -> true
         }
-    avail.fold({ hasFail().not() }, { w -> test(w) })
+    test(avail)
 }
 
 fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { pw, minNest, avail ->
@@ -37,7 +37,7 @@ fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLei
                 else -> true
             }
         }
-    avail.fold({ hasFail().not() }, { w -> test(pw, minNest, w) })
+    test(pw, minNest, avail)
 }
 
 fun <A> Doc<A>.layoutWadlerLeijen(
@@ -45,28 +45,22 @@ fun <A> Doc<A>.layoutWadlerLeijen(
     fits: FittingFun<A>
 ): SimpleDoc<A> {
     fun selectNicer(lineLen: Int, currCol: Int, x: SimpleDoc<A>, y: SimpleDoc<A>): SimpleDoc<A> =
-        if (x.fits(
-                pageWidth,
-                if (y.startsWithLine()) lineLen else currCol,
-                Option.fx {
-                    val colsLeft = !(when (pageWidth) {
-                        is PageWidth.Available -> (pageWidth.maxWidth - currCol).some()
-                        else -> none()
-                    })
-                    val colsLeftRibbon = !Option.fx {
-                        val ribbonW = !(when (pageWidth) {
-                            is PageWidth.Available ->
-                                max(
-                                    0,
-                                    min(pageWidth.maxWidth, round(pageWidth.maxWidth * pageWidth.ribbonFract).toInt())
-                                ).some()
-                            else -> none()
-                        })
-                        lineLen + ribbonW - currCol
-                    }
-                    min(colsLeft, colsLeftRibbon)
-                })
-        ) x else y
+        when (pageWidth) {
+            is PageWidth.Available -> {
+                val ribbonW = max(
+                    0,
+                    min(pageWidth.maxWidth, round(pageWidth.maxWidth * pageWidth.ribbonFract).toInt())
+                )
+                val colsLeftInRibbon = lineLen + ribbonW - currCol
+                val colsLeftInLine = pageWidth.maxWidth - currCol
+                if (x.fits(
+                        pageWidth,
+                        if (y.startsWithLine()) lineLen else currCol,
+                        min(colsLeftInLine, colsLeftInRibbon)
+                )) x else y
+            }
+            is PageWidth.Unbounded -> if (x.hasFailOnFirstLine()) y else x
+        }
 
     // TODO Benchmark this against cata
     // TODO Add tests how lazy this is, or if laziness is a benefit to Doc at all
@@ -163,3 +157,13 @@ tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc.value()) 
     is SimpleDocF.Line -> dF.doc.hasFail()
     is SimpleDocF.Text -> dF.doc.hasFail()
 }
+
+tailrec fun <A> SimpleDoc<A>.hasFailOnFirstLine(): Boolean = when (val dF = unDoc.value()) {
+    is SimpleDocF.Fail -> true
+    is SimpleDocF.Nil -> false
+    is SimpleDocF.RemoveAnnotation -> dF.doc.hasFailOnFirstLine()
+    is SimpleDocF.AddAnnotation -> dF.doc.hasFailOnFirstLine()
+    is SimpleDocF.Line -> false
+    is SimpleDocF.Text -> dF.doc.hasFailOnFirstLine()
+}
+
