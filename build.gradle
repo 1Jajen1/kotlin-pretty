@@ -49,6 +49,8 @@ allprojects {
             url "https://plugins.gradle.org/m2/"
         }
         maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
+        maven { url 'https://dl.bintray.com/jannis/kotlin-pretty' }
+        maven { url 'https://dl.bintray.com/jannis/kparsec' }
         maven { url 'https://dl.bintray.com/jannis/propCheck-kt' }
     }
 }

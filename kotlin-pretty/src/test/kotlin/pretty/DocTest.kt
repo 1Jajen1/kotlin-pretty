@@ -1,92 +1,50 @@
 package pretty
 
-import arrow.core.AndThen
-import arrow.core.Eval
-import arrow.core.extensions.eval.applicative.applicative
+import arrow.core.extensions.eq
 import arrow.core.extensions.monoid
+import arrow.core.extensions.show
 import arrow.core.identity
-import arrow.core.some
-import arrow.fx.IO
-import arrow.typeclasses.Show
-import pretty.doc.arbitrary.arbitrary
-import pretty.pagewidth.arbitrary.arbitrary
-import propCheck.*
-import propCheck.instances.arbitrary
-import propCheck.testresult.testable.testable
+import propCheck.pretty.showPretty
+import propCheck.property.NoConfidenceTermination
+import propCheck.property.PropertyConfig
 
 class DocTest : PropertySpec({
-    "layoutPretty should never render to a document that contains a fail"(Args(maxSuccess = 1_000)) {
-        forAll(Doc.arbitrary(String.arbitrary()), Show { "<Doc>" }) { doc ->
-            forAll(PageWidth.arbitrary()) { pw ->
-                val sDoc = doc.layoutPretty(PageWidth.default())
-                val hasFail = sDoc.hasFail().not()
+    "layoutPretty should never render to a document that contains a fail"(PropertyConfig(NoConfidenceTermination(limit = 100_000))) {
+        val layoutOptions = forAll(genPageWidth).bind()
+        val doc = forAllWith({ it.diag().showPretty() }) { genDoc(latin1().string(0..100)) }.bind()
 
-                hasFail
-            }
-        }
-    }
-    "layoutSmart should never render to a document that contains a fail"(Args(maxSuccess = 1_000)) {
-        forAll(Doc.arbitrary(String.arbitrary()), Show { "<Doc>" }) { doc ->
-            forAll(PageWidth.arbitrary()) { pw ->
-                val sDoc = doc.layoutSmart(PageWidth.default())
-                val hasFail = sDoc.hasFail().not()
+        val sDoc = doc.layoutPretty(layoutOptions)
 
-                hasFail
-            }
-        }
+        if (sDoc.hasFail()) failWith("Layed out doc had fail!").bind()
     }
-    "layoutCompact should never render to a document that contains a fail"(Args(maxSuccess = 1_000)) {
-        forAll(Doc.arbitrary(String.arbitrary()), Show { "<Doc>" }) { doc ->
-            forAll(PageWidth.arbitrary()) { pw ->
-                val sDoc = doc.layoutCompact()
-                val hasFail = sDoc.hasFail().not()
+    "layoutSmart should never render to a document that contains a fail"(PropertyConfig(NoConfidenceTermination(limit = 100_000))) {
+        val layoutOptions = forAll(genPageWidth).bind()
+        val doc = forAllWith({ it.diag().showPretty() }) { genDoc(latin1().string(0..100)) }.bind()
 
-                hasFail
-            }
-        }
+        val sDoc = doc.layoutSmart(layoutOptions)
+
+        if (sDoc.hasFail()) failWith("Layed out doc had fail!").bind()
     }
-    "fuse should never change how a doc is rendered"(Args(maxSuccess = 1_000)) {
-        forAll(Doc.arbitrary(String.arbitrary()), Show { "Doc: \"${renderDebug().value()}\"" }) { doc ->
-            forAll(PageWidth.arbitrary()) { pw ->
-                forAll(Boolean.arbitrary()) { b ->
-                    // TODO clean this up... Exceptions will get caught in the propCheck rework
-                    try {
-                        val sDoc = doc.layoutPretty(pw).renderStringAnn()
-                        val sDocFused = doc.fuse(b).layoutPretty(pw).renderStringAnn()
-                        counterexample({
-                            "Fused doc: ${doc.fuse(b).renderDebug().value()}"
-                        }, sDoc.eqv(sDocFused))
-                    } catch (e: Exception) {
-                        TestResult.testable().run { failed("Exception", e.some()).property() }
-                    }
-                }
-            }
-        }
+    "layoutCompact should never render to a document that contains a fail"(PropertyConfig(NoConfidenceTermination(limit = 100_000))) {
+        val doc = forAllWith({ it.diag().showPretty() }) { genDoc(latin1().string(0..100)) }.bind()
+
+        val sDoc = doc.layoutCompact()
+
+        if (sDoc.hasFail()) failWith("Layed out doc had fail!").bind()
+    }
+    "fuse should never change how a doc is rendered"(PropertyConfig(NoConfidenceTermination(limit = 100_000))) {
+        val layoutOptions = forAll(genPageWidth).bind()
+        val deep = forAll { boolean() }.bind()
+        val doc = forAllWith({ it.diag().showPretty() }) { genDoc(latin1().string(0..100)) }.bind()
+
+        val fused = doc.fuse(deep)
+
+        annotate { "Fused:".text() spaced fused.diag().showPretty() }.bind()
+
+        doc.layoutPretty(layoutOptions).renderStringAnn()
+            .eqv(fused.layoutPretty(layoutOptions).renderStringAnn(), String.eq(), String.show()).bind()
     }
 })
-
-fun Doc<String>.renderDebug(): Eval<String> = unDoc.flatMap { dF ->
-    when (dF) {
-        is DocF.Annotated -> dF.doc.renderDebug().map { "Annotated(ann=${dF.ann}, doc=$it)" }
-        is DocF.Combined -> Eval.applicative().map(dF.l.renderDebug(), dF.r.renderDebug()) { (l, r) ->
-            "Combined(l=$l, r=$r)"
-        }
-        is DocF.Text -> Eval.now("String(str=${dF.str})")
-        is DocF.Nil -> Eval.now("Nil")
-        is DocF.Fail -> Eval.now("Fail")
-        is DocF.Column -> dF.doc(0).renderDebug().map { "Column(0) -> $it" }
-        is DocF.Nesting -> dF.doc(0).renderDebug().map { "Nesting(0) -> $it" }
-        is DocF.WithPageWidth -> dF.doc(PageWidth.default()).renderDebug().map { "PageWidth(<def>) -> $it" }
-        is DocF.Nest -> dF.doc.renderDebug().map { "Nest(i=${dF.i}, doc=$it)" }
-        is DocF.Line -> Eval.now("Line")
-        is DocF.FlatAlt -> Eval.applicative().map(dF.l.renderDebug(), dF.r.renderDebug()) { (l, r) ->
-            "FlatAlt(l=$l, r=$r)"
-        }
-        is DocF.Union -> Eval.applicative().map(dF.l.renderDebug(), dF.r.renderDebug()) { (l, r) ->
-            "Union(l=$l, r=$r)"
-        }
-    }
-}
 
 fun SimpleDoc<String>.renderStringAnn(): String =
     renderDecorated(String.monoid(), ::identity, { "<-$it" }, { "$it->" })

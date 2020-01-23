@@ -81,6 +81,7 @@ fun <A> Doc<A>.flatten(): Doc<A> = Doc(unDoc.flatMap {
         is DocF.WithPageWidth -> Eval.now(DocF.WithPageWidth(AndThen(it.doc).andThen { it.flatten() }))
         is DocF.Column -> Eval.now(DocF.Column(AndThen(it.doc).andThen { it.flatten() }))
         is DocF.Nesting -> Eval.now(DocF.Nesting(AndThen(it.doc).andThen { it.flatten() }))
+        is DocF.Line -> Eval.now(DocF.Fail)
         else -> Eval.now(it)
     }
 })

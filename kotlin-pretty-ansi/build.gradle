@@ -11,7 +11,7 @@ dependencies {
     kapt "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
     kaptTest "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
 
-    testImplementation "propCheck:propCheck-kt:0.9.6"
+    testImplementation "propCheck:propCheck-kt:0.10.0"
 
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2") {
         exclude group: "io.arrow-kt"
