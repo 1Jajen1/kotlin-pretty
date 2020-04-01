@@ -4,10 +4,10 @@ import arrow.Kind
 import arrow.Kind2
 import arrow.core.Eval
 import arrow.core.extensions.eq
-import arrow.test.UnitSpec
-import arrow.test.generators.GenK
-import arrow.test.generators.GenK2
-import arrow.test.laws.*
+import arrow.core.test.UnitSpec
+import arrow.core.test.generators.GenK
+import arrow.core.test.generators.GenK2
+import arrow.core.test.laws.*
 import arrow.typeclasses.Eq
 import arrow.typeclasses.EqK
 import arrow.typeclasses.EqK2

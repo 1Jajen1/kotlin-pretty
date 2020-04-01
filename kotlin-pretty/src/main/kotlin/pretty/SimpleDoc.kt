@@ -55,10 +55,10 @@ interface SimpleDocFFoldable<C> : Foldable<SimpleDocFPartialOf<C>> {
         when (val it = fix()) {
             is SimpleDocF.Fail -> lb
             is SimpleDocF.Nil -> lb
-            is SimpleDocF.Line -> f(it.doc, lb)
-            is SimpleDocF.Text -> f(it.doc, lb)
-            is SimpleDocF.AddAnnotation -> f(it.doc, lb)
-            is SimpleDocF.RemoveAnnotation -> f(it.doc, lb)
+            is SimpleDocF.Line -> Eval.defer { f(it.doc, lb) }
+            is SimpleDocF.Text -> Eval.defer { f(it.doc, lb) }
+            is SimpleDocF.AddAnnotation -> Eval.defer { f(it.doc, lb) }
+            is SimpleDocF.RemoveAnnotation -> Eval.defer { f(it.doc, lb) }
         }
 }
 
