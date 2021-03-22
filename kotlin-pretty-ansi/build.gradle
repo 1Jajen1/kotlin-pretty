@@ -1,13 +1,12 @@
-
-apply plugin: 'kotlin-kapt'
-
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    api project(":kotlin-pretty")
-}
-
-test {
-    useJUnitPlatform()
-}
-
+apply from: rootProject.file('gradle/targets.gradle')
 apply from: rootProject.file('gradle/publish.gradle')
+
+kotlin {
+    sourceSets {
+        commonMain {
+            dependencies {
+                api project(':kotlin-pretty')
+            }
+        }
+    }
+}

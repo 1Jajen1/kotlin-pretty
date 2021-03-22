@@ -5,39 +5,14 @@ buildscript {
     }
 
     repositories {
-        jcenter()
+        mavenCentral()
         maven {
             url "https://plugins.gradle.org/m2/"
         }
-        maven { url 'https://dl.bintray.com/arrow-kt/arrow-kt/' }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-        classpath "io.arrow-kt:arrow-ank-gradle:$arrow_version"
     }
-}
-
-// ank setup, kotlin project + sources from both subprojects
-apply plugin: 'ank-gradle-plugin'
-apply plugin: 'kotlin'
-
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation project(":kotlin-pretty")
-    implementation project(":kotlin-pretty-ansi")
-}
-
-compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-ank {
-    source = file("docs/contentIn")
-    target = file("docs/content")
-    classpath = sourceSets.main.runtimeClasspath
 }
 
 allprojects {
@@ -46,7 +21,6 @@ allprojects {
         maven {
             url "https://plugins.gradle.org/m2/"
         }
-        maven { url 'https://dl.bintray.com/jannis/kotlin-pretty' }
     }
 }
 
@@ -54,12 +28,9 @@ subprojects { proj ->
     group = GROUP
     version = VERSION_NAME
 
-    apply plugin: 'kotlin'
+    apply plugin: 'kotlin-multiplatform'
 
-    compileKotlin {
-        kotlinOptions.jvmTarget = "1.8"
-    }
-    compileTestKotlin {
-        kotlinOptions.jvmTarget = "1.8"
+    kotlin {
+        explicitApi = 'strict'
     }
 }

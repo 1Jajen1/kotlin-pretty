@@ -9,7 +9,7 @@ internal fun <A> AndThen.Companion.defer(f: () -> Eval<A>): Eval<A> =
 
 internal operator fun <A> Eval<A>.invoke(): A = invoke(Unit)
 
-internal sealed class AndThen<in A, out B>: (A) -> B {
+internal sealed class AndThen<in A, out B> {
 
     class Single<A, B>(val f: (A) -> B, val index: Int) : AndThen<A, B>()
 
@@ -22,7 +22,7 @@ internal sealed class AndThen<in A, out B>: (A) -> B {
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun invoke(a: A): B = loop(this as AndThen<Any?, Any?>, a, 0)
+    operator fun invoke(a: A): B = loop(this as AndThen<Any?, Any?>, a, 0)
 
     fun <X> andThenF(right: AndThen<B, X>): AndThen<A, X> = Concat(this, right)
     fun <X> composeF(right: AndThen<X, A>): AndThen<X, B> = Concat(right, this)
@@ -47,10 +47,7 @@ internal sealed class AndThen<in A, out B>: (A) -> B {
 
 
     companion object {
-        operator fun <A, B> invoke(f: (A) -> B): AndThen<A, B> = when (f) {
-            is AndThen<A, B> -> f
-            else -> Single(f, 0)
-        }
+        operator fun <A, B> invoke(f: (A) -> B): AndThen<A, B> = Single(f, 0)
 
         private const val maxStackDepthSize = 127
     }
@@ -95,10 +92,4 @@ internal sealed class AndThen<in A, out B>: (A) -> B {
 }
 
 internal fun <A, B, C> AndThen<A, B>.flatMap(f: (B) -> AndThen<A, C>): AndThen<A, C> =
-    AndThen.Join(this.andThen(AndThen(f).andThen { it }))
-
-internal inline fun <A, B, C> ((A) -> B).andThen(noinline f: (B) -> C): (A) -> C =
-    AndThen(this).andThen(f)
-
-internal inline fun <A, B, C> ((A) -> B).compose(noinline f: (C) -> A): (C) -> B =
-    AndThen(this).compose(f)
+    AndThen.Join(this.andThen(f))

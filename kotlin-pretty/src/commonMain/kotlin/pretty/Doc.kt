@@ -8,20 +8,20 @@ internal sealed class DocF<out A> {
     data class Union<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
     data class Combined<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
     data class Nest<A>(val i: Int, val doc: Doc<A>) : DocF<A>()
-    data class Column<A>(val doc: (Int) -> Doc<A>) : DocF<A>()
-    data class Nesting<A>(val doc: (Int) -> Doc<A>) : DocF<A>()
+    data class Column<A>(val doc: AndThen<Int, Doc<A>>) : DocF<A>()
+    data class Nesting<A>(val doc: AndThen<Int, Doc<A>>) : DocF<A>()
     data class FlatAlt<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
     data class Annotated<A>(val ann: A, val doc: Doc<A>) : DocF<A>()
-    data class WithPageWidth<A>(val doc: (PageWidth) -> Doc<A>) : DocF<A>()
+    data class WithPageWidth<A>(val doc: AndThen<PageWidth, Doc<A>>) : DocF<A>()
 
     companion object
 }
 
-data class Doc<out A> internal constructor(internal val unDoc: Eval<DocF<A>>) {
+public data class Doc<out A> internal constructor(internal val unDoc: Eval<DocF<A>>) {
 
     override fun toString(): String = pretty()
 
-    fun <B> map(f: (A) -> B): Doc<B> = Doc(unDoc.andThen {
+    internal fun <B> map(f: (A) -> B): Doc<B> = Doc(unDoc.andThen {
         when (it) {
             is DocF.Nil -> DocF.Nil
             is DocF.Fail -> DocF.Fail
@@ -38,14 +38,14 @@ data class Doc<out A> internal constructor(internal val unDoc: Eval<DocF<A>>) {
         }
     })
 
-    companion object {
-        fun empty() = Doc(Eval.now(DocF.Nil))
+    public companion object {
+        public fun empty(): Doc<Nothing> = Doc(Eval.now(DocF.Nil))
     }
 }
 
-operator fun <A> Doc<A>.plus(other: Doc<A>): Doc<A> = Doc(Eval.now(DocF.Combined(this, other)))
+public operator fun <A> Doc<A>.plus(other: Doc<A>): Doc<A> = Doc(Eval.now(DocF.Combined(this, other)))
 
-fun <A> Doc<A>.fuse(shallow: Boolean = true): Doc<A> = Doc(unDoc.flatMap {
+public fun <A> Doc<A>.fuse(shallow: Boolean = true): Doc<A> = Doc(unDoc.flatMap {
     when (it) {
         is DocF.Combined -> it.l.fuse(shallow).unDoc.flatMap { lF ->
             it.r.fuse(shallow).unDoc.andThen { rF ->

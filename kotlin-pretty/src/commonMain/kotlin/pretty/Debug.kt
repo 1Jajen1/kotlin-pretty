@@ -1,29 +1,29 @@
 package pretty
 
 
-sealed class Diag<out A> {
-    object Fail : Diag<Nothing>() {
+public sealed class Diag<out A> {
+    public object Fail : Diag<Nothing>() {
         override fun toString(): String = "Fail"
     }
-    object Nil : Diag<Nothing>() {
+    public object Nil : Diag<Nothing>() {
         override fun toString(): String = "Nil"
     }
-    data class Text(val str: String) : Diag<Nothing>()
-    object Line : Diag<Nothing>() {
+    public data class Text(val str: String) : Diag<Nothing>()
+    public object Line : Diag<Nothing>() {
         override fun toString(): String = "Line"
     }
-    data class FlatAlt<A>(val l: Diag<A>, val r: Diag<A>): Diag<A>()
-    data class Combined<A>(val l: Diag<A>, val r: Diag<A>): Diag<A>()
-    data class Union<A>(val l: Diag<A>, val r: Diag<A>): Diag<A>()
-    data class Nest<A>(val i: Int, val doc: Diag<A>): Diag<A>()
-    data class Annotated<A>(val ann: A, val doc: Diag<A>): Diag<A>()
-    data class WithPageWidth<A>(val sample: List<Pair<PageWidth, Diag<A>>>): Diag<A>()
-    data class Nesting<A>(val sample: List<Pair<Int, Diag<A>>>): Diag<A>()
-    data class Column<A>(val sample: List<Pair<Int, Diag<A>>>): Diag<A>()
+    public data class FlatAlt<A>(val l: Diag<A>, val r: Diag<A>): Diag<A>()
+    public data class Combined<A>(val l: Diag<A>, val r: Diag<A>): Diag<A>()
+    public data class Union<A>(val l: Diag<A>, val r: Diag<A>): Diag<A>()
+    public data class Nest<A>(val i: Int, val doc: Diag<A>): Diag<A>()
+    public data class Annotated<A>(val ann: A, val doc: Diag<A>): Diag<A>()
+    public data class WithPageWidth<A>(val sample: List<Pair<PageWidth, Diag<A>>>): Diag<A>()
+    public data class Nesting<A>(val sample: List<Pair<Int, Diag<A>>>): Diag<A>()
+    public data class Column<A>(val sample: List<Pair<Int, Diag<A>>>): Diag<A>()
 }
 
 // tailrec with cps if this ever overflows
-fun <A> Doc<A>.diag(
+public fun <A> Doc<A>.diag(
     col: List<Int> = listOf(10),
     pw: List<PageWidth> = listOf(PageWidth.default()),
     nest: List<Int> = listOf(10)

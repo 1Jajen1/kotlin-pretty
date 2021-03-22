@@ -1,34 +1,34 @@
 package pretty
 
-sealed class Color {
-    object Black : Color()
-    object Red : Color()
-    object Green : Color()
-    object Yellow : Color()
-    object Blue : Color()
-    object Magenta : Color()
-    object Cyan : Color()
-    object White : Color()
+public sealed class Color {
+    public object Black : Color()
+    public object Red : Color()
+    public object Green : Color()
+    public object Yellow : Color()
+    public object Blue : Color()
+    public object Magenta : Color()
+    public object Cyan : Color()
+    public object White : Color()
 }
 
-sealed class Intensity {
-    object Dull : Intensity()
-    object Vivid : Intensity()
+public sealed class Intensity {
+    public object Dull : Intensity()
+    public object Vivid : Intensity()
 }
 
-object Bold
-object Underlined
-object Italicized
+public object Bold
+public object Underlined
+public object Italicized
 
 // TODO maybe offer a more complete sgr rep in the future?
-data class AnsiStyle(
+public data class AnsiStyle(
     val foreground: Pair<Intensity, Color>?,
     val background: Pair<Intensity, Color>?,
     val bold: Bold?,
     val underlined: Underlined?,
     val italics: Italicized?
 ) {
-    operator fun plus(other: AnsiStyle): AnsiStyle = AnsiStyle(
+    public operator fun plus(other: AnsiStyle): AnsiStyle = AnsiStyle(
         foreground = foreground ?: other.foreground,
         background = background ?: other.background,
         bold = bold ?: other.bold,
@@ -36,20 +36,20 @@ data class AnsiStyle(
         italics = italics ?: other.italics
     )
 
-    companion object {
-        fun empty() = AnsiStyle(null, null, null, null, null)
+    public companion object {
+        public fun empty(): AnsiStyle = AnsiStyle(null, null, null, null, null)
     }
 }
 
-fun color(c: Color): AnsiStyle = AnsiStyle.empty().copy(foreground = (Intensity.Vivid to c))
-fun bgColor(c: Color): AnsiStyle = AnsiStyle.empty().copy(background = (Intensity.Vivid to c))
-fun colorDull(c: Color): AnsiStyle = AnsiStyle.empty().copy(foreground = (Intensity.Dull to c))
-fun bgColorDull(c: Color): AnsiStyle = AnsiStyle.empty().copy(background = (Intensity.Dull to c))
-fun bold(): AnsiStyle = AnsiStyle.empty().copy(bold = Bold)
-fun italicized(): AnsiStyle = AnsiStyle.empty().copy(italics = Italicized)
-fun underlined(): AnsiStyle = AnsiStyle.empty().copy(underlined = Underlined)
+public fun color(c: Color): AnsiStyle = AnsiStyle.empty().copy(foreground = (Intensity.Vivid to c))
+public fun bgColor(c: Color): AnsiStyle = AnsiStyle.empty().copy(background = (Intensity.Vivid to c))
+public fun colorDull(c: Color): AnsiStyle = AnsiStyle.empty().copy(foreground = (Intensity.Dull to c))
+public fun bgColorDull(c: Color): AnsiStyle = AnsiStyle.empty().copy(background = (Intensity.Dull to c))
+public fun bold(): AnsiStyle = AnsiStyle.empty().copy(bold = Bold)
+public fun italicized(): AnsiStyle = AnsiStyle.empty().copy(italics = Italicized)
+public fun underlined(): AnsiStyle = AnsiStyle.empty().copy(underlined = Underlined)
 
-fun AnsiStyle.toRawString(): String =
+public fun AnsiStyle.toRawString(): String =
     (listOf(0) + // reset
             listOf(
                 foreground?.let { (int, c) ->
@@ -69,7 +69,7 @@ fun AnsiStyle.toRawString(): String =
                 italics?.let { 3 }
             ).filterNotNull()).csi("m")
 
-fun Color.toCode(): Int = when (this) {
+public fun Color.toCode(): Int = when (this) {
     is Color.Black -> 0
     is Color.Red -> 1
     is Color.Green -> 2
@@ -94,7 +94,7 @@ private fun <A> List<A>.intersperse(a: A): List<A> = when {
 
 private fun <A> repeat(a: A): Sequence<A> = generateSequence { a }
 
-fun SimpleDoc<AnsiStyle>.renderAnsiString(): String {
+public fun SimpleDoc<AnsiStyle>.renderAnsiString(): String {
     // local mutability is fine ^-^
     val sb: StringBuilder = StringBuilder()
     val anns = ArrayDeque<AnsiStyle>()

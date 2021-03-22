@@ -4,9 +4,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
 
-typealias FittingFun<A> = SimpleDoc<A>.(pageWidth: PageWidth, minNesting: Int, availableWidth: Int) -> Boolean
+internal typealias FittingFun<A> = SimpleDoc<A>.(pageWidth: PageWidth, minNesting: Int, availableWidth: Int) -> Boolean
 
-fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { _, _, avail ->
+public fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { _, _, avail ->
     tailrec fun <A> SimpleDoc<A>.test(i: Int): Boolean =
         if (i < 0) false else when (val dF = unDoc()) {
             is SimpleDocF.Text -> dF.doc.test(i - dF.str.length)
@@ -19,7 +19,7 @@ fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLe
     test(avail)
 }
 
-fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { pw, minNest, avail ->
+public fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { pw, minNest, avail ->
     tailrec fun <A> SimpleDoc<A>.test(pw: PageWidth, m: Int, w: Int): Boolean =
         if (w < 0) false else when (val dF = unDoc()) {
             is SimpleDocF.Fail -> false
@@ -37,7 +37,7 @@ fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLei
     test(pw, minNest, avail)
 }
 
-fun <A> Doc<A>.layoutWadlerLeijen(
+private fun <A> Doc<A>.layoutWadlerLeijen(
     pageWidth: PageWidth,
     fits: FittingFun<A>
 ): SimpleDoc<A> {
@@ -110,7 +110,7 @@ fun <A> Doc<A>.layoutWadlerLeijen(
     return lBest(0, 0, listOf((0 to this)))
 }
 
-fun <A> Doc<A>.layoutCompact(): SimpleDoc<A> {
+public fun <A> Doc<A>.layoutCompact(): SimpleDoc<A> {
     fun scan(i: Int, ls: List<Doc<A>>): SimpleDoc<A> =
         if (ls.isEmpty()) SimpleDoc.nil()
         else {
@@ -137,7 +137,7 @@ fun <A> Doc<A>.layoutCompact(): SimpleDoc<A> {
     return scan(0, listOf(this))
 }
 
-tailrec fun <A> SimpleDoc<A>.startsWithLine(): Boolean =
+private tailrec fun <A> SimpleDoc<A>.startsWithLine(): Boolean =
     when (val dF = unDoc()) {
         is SimpleDocF.Line -> true
         is SimpleDocF.AddAnnotation -> dF.doc.startsWithLine()
@@ -145,7 +145,7 @@ tailrec fun <A> SimpleDoc<A>.startsWithLine(): Boolean =
         else -> false
     }
 
-tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc()) {
+private tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc()) {
     is SimpleDocF.Fail -> true
     is SimpleDocF.Nil -> false
     is SimpleDocF.RemoveAnnotation -> dF.doc.hasFail()
@@ -154,7 +154,7 @@ tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc()) {
     is SimpleDocF.Text -> dF.doc.hasFail()
 }
 
-tailrec fun <A> SimpleDoc<A>.hasFailOnFirstLine(): Boolean = when (val dF = unDoc()) {
+private tailrec fun <A> SimpleDoc<A>.hasFailOnFirstLine(): Boolean = when (val dF = unDoc()) {
     is SimpleDocF.Fail -> true
     is SimpleDocF.Nil -> false
     is SimpleDocF.RemoveAnnotation -> dF.doc.hasFailOnFirstLine()
