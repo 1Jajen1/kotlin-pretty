@@ -9,7 +9,7 @@ public sealed class PageWidth {
     }
 }
 
-internal fun String.words(): List<Doc<Nothing>> =
+public fun String.words(): List<Doc<Nothing>> =
     split(' ').map { it.doc() }
 
 public fun String.reflow(): Doc<Nothing> =

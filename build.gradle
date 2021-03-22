@@ -12,6 +12,7 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        classpath "io.arrow-kt:arrow-ank-gradle:0.10.5"
     }
 }
 
@@ -33,4 +34,20 @@ subprojects { proj ->
     kotlin {
         explicitApi = 'strict'
     }
+}
+
+// ank setup
+apply plugin: 'ank-gradle-plugin'
+apply plugin: 'kotlin'
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation project(":kotlin-pretty")
+    implementation project(":kotlin-pretty-ansi")
+}
+
+ank {
+    source = file("docs/contentIn")
+    target = file("docs/content")
+    classpath = sourceSets.main.runtimeClasspath
 }

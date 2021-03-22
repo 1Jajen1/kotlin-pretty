@@ -1,15 +1,15 @@
 package pretty
 
-internal sealed class SimpleDocF<out A> {
-    object Fail : SimpleDocF<Nothing>()
-    object Nil : SimpleDocF<Nothing>()
-    data class Line<A>(val i: Int, val doc: SimpleDoc<A>) : SimpleDocF<A>()
-    data class Text<A>(val str: String, val doc: SimpleDoc<A>) : SimpleDocF<A>()
-    data class AddAnnotation<A>(val ann: A, val doc: SimpleDoc<A>) : SimpleDocF<A>()
-    data class RemoveAnnotation<A>(val doc: SimpleDoc<A>) : SimpleDocF<A>()
+public sealed class SimpleDocF<out A> {
+    public object Fail : SimpleDocF<Nothing>()
+    public object Nil : SimpleDocF<Nothing>()
+    public data class Line<A>(val i: Int, val doc: SimpleDoc<A>) : SimpleDocF<A>()
+    public data class Text<A>(val str: String, val doc: SimpleDoc<A>) : SimpleDocF<A>()
+    public data class AddAnnotation<A>(val ann: A, val doc: SimpleDoc<A>) : SimpleDocF<A>()
+    public data class RemoveAnnotation<A>(val doc: SimpleDoc<A>) : SimpleDocF<A>()
 }
 
-public data class SimpleDoc<out A>internal constructor(internal val unDoc: Eval<SimpleDocF<A>>) {
+public data class SimpleDoc<out A>(val unDoc: Eval<SimpleDocF<A>>) {
 
     override fun toString(): String = "SimpleDoc(unDoc=${unDoc()})"
 

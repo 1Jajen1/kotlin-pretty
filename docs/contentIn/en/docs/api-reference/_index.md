@@ -701,24 +701,18 @@ A very simple layout algorithm that lays out a document with no extra newlines o
 Render a simple doc as a string. Ignores annotations.
 
 ---
-###### `fun <A, B> SimpleDoc<A>.renderDecorated(MO: Monoid<B>, text: (String) -> B, addAnn: (A) -> B, removeAnn: (A) -> B): B`
+###### `fun <A, B> SimpleDoc<A>.renderDecorated(empty: B, combine: (B, B) -> B, fromString: (String) -> B, annotate: (A, B) -> B): B`
 
-Helper to implement basic renders that handle annotations. This takes a [Monoid](https://arrow-kt.io/docs/arrow/typeclasses/monoid/), which in short is a combine operation and an empty element for a given datatype (e.g. `StringMonoid = { empty = "", combine = (a: String, b: String) -> a + b }`). Also this should hold a few invariants: `empty + x == x`, `x + empty == x` and `a + (b + c) == (a + b) + c`. The other parameters are functions which handle either text or the addition or removal of an annotation.
+Helper to implement basic renders that handle annotations.
 
 For example [renderString]({{< relref "#fun-simpledocarenderstring-string" >}}) is defined as:
 ```kotlin:ank:silent
-import arrow.core.identity
-import arrow.core.extensions.monoid
 
 fun <A> SimpleDoc<A>.renderString(): String =
     renderDecorated(
-        String.monoid(), // predefined by arrow
-        ::identity, // also predefined by arrow, simple does nothing with the input
-        { "" }, { "" } // don't add anything on either addition or removal of annotations
+        empty = "",
+        combine = { a, b -> a + b },
+        fromString = { it },
+        annotate = { ann, str -> str }
     )
 ```
-
----
-###### `fun <A, B> SimpleDoc<A>.renderDecoratedA(AP: Applicative<F>, MO: Monoid<B>, text: (String) -> Kind<F, B>, addAnn: (A) -> Kind<F, B>, removeAnn: (A) -> Kind<F, B>): B`
-
-More general form of [renderDecorated]({{< relref "#fun-a-b-simpledocarenderdecoratedaap-applicativef-mo-monoidb-text-string---kindf-b-addann-a---kindf-b-removeann-a---kindf-b-b" >}}). This allows in a purely functional way to do effects when rendering. This can mean keeping some state around, writing additional output or accessing inputs. If you value pure functions, this can also be used to render directly to an output handle in a purely functional way. [renderDecorated]({{< relref "#fun-a-b-simpledocarenderdecoratedaap-applicativef-mo-monoidb-text-string---kindf-b-addann-a---kindf-b-removeann-a---kindf-b-b" >}}) is also defined as `renderDecoratedA` but using the `Id` applicative, which is the identity effect, i.e. it does nothing special on top of the default behaviour. 

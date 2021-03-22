@@ -1,33 +1,33 @@
 package pretty
 
-internal typealias Eval<A> = AndThen<Unit, A>
+public typealias Eval<A> = AndThen<Unit, A>
 
-internal fun <A> AndThen.Companion.now(a: A): Eval<A> = AndThen { a }
-internal fun <A> AndThen.Companion.later(f: () -> A): Eval<A> = AndThen.Single({ f() }, 0)
-internal fun <A> AndThen.Companion.defer(f: () -> Eval<A>): Eval<A> =
+public fun <A> AndThen.Companion.now(a: A): Eval<A> = AndThen { a }
+public fun <A> AndThen.Companion.later(f: () -> A): Eval<A> = AndThen.Single({ f() }, 0)
+public fun <A> AndThen.Companion.defer(f: () -> Eval<A>): Eval<A> =
     AndThen.Single<Unit, AndThen<Unit, A>>({ f() }, 0).flatMap { it }
 
-internal operator fun <A> Eval<A>.invoke(): A = invoke(Unit)
+public operator fun <A> Eval<A>.invoke(): A = invoke(Unit)
 
-internal sealed class AndThen<in A, out B> {
+public sealed class AndThen<in A, out B> {
 
-    class Single<A, B>(val f: (A) -> B, val index: Int) : AndThen<A, B>()
+    internal class Single<A, B>(val f: (A) -> B, val index: Int) : AndThen<A, B>()
 
-    class Join<A, B>(val fa: AndThen<A, AndThen<A, B>>) : AndThen<A, B>() {
+    internal class Join<A, B>(val fa: AndThen<A, AndThen<A, B>>) : AndThen<A, B>() {
         override fun toString(): String = "AndThen.Join(...)"
     }
 
-    class Concat<A, E, B>(val left: AndThen<A, E>, val right: AndThen<E, B>) : AndThen<A, B>() {
+    internal class Concat<A, E, B>(val left: AndThen<A, E>, val right: AndThen<E, B>) : AndThen<A, B>() {
         override fun toString(): String = "AndThen.Concat(...)"
     }
 
     @Suppress("UNCHECKED_CAST")
-    operator fun invoke(a: A): B = loop(this as AndThen<Any?, Any?>, a, 0)
+    public operator fun invoke(a: A): B = loop(this as AndThen<Any?, Any?>, a, 0)
 
-    fun <X> andThenF(right: AndThen<B, X>): AndThen<A, X> = Concat(this, right)
-    fun <X> composeF(right: AndThen<X, A>): AndThen<X, B> = Concat(right, this)
+    internal fun <X> andThenF(right: AndThen<B, X>): AndThen<A, X> = Concat(this, right)
+    internal fun <X> composeF(right: AndThen<X, A>): AndThen<X, B> = Concat(right, this)
 
-    fun <X> andThen(g: (B) -> X): AndThen<A, X> =
+    public fun <X> andThen(g: (B) -> X): AndThen<A, X> =
         when (this) {
             // Fusing calls up to a certain threshold
             is Single ->
@@ -36,7 +36,7 @@ internal sealed class AndThen<in A, out B> {
             else -> andThenF(AndThen(g))
         }
 
-    fun <C> compose(g: (C) -> A): AndThen<C, B> =
+    public fun <C> compose(g: (C) -> A): AndThen<C, B> =
         when (this) {
             // Fusing calls up to a certain threshold
             is Single ->
@@ -46,8 +46,8 @@ internal sealed class AndThen<in A, out B> {
         }
 
 
-    companion object {
-        operator fun <A, B> invoke(f: (A) -> B): AndThen<A, B> = Single(f, 0)
+    public companion object {
+        public operator fun <A, B> invoke(f: (A) -> B): AndThen<A, B> = Single(f, 0)
 
         private const val maxStackDepthSize = 127
     }
@@ -91,5 +91,5 @@ internal sealed class AndThen<in A, out B> {
     }
 }
 
-internal fun <A, B, C> AndThen<A, B>.flatMap(f: (B) -> AndThen<A, C>): AndThen<A, C> =
+public fun <A, B, C> AndThen<A, B>.flatMap(f: (B) -> AndThen<A, C>): AndThen<A, C> =
     AndThen.Join(this.andThen(f))

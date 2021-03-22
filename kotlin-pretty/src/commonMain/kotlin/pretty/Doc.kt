@@ -1,27 +1,25 @@
 package pretty
 
-internal sealed class DocF<out A> {
-    object Nil : DocF<Nothing>()
-    object Fail : DocF<Nothing>()
-    object Line : DocF<Nothing>()
-    data class Text(val str: String) : DocF<Nothing>()
-    data class Union<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
-    data class Combined<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
-    data class Nest<A>(val i: Int, val doc: Doc<A>) : DocF<A>()
-    data class Column<A>(val doc: AndThen<Int, Doc<A>>) : DocF<A>()
-    data class Nesting<A>(val doc: AndThen<Int, Doc<A>>) : DocF<A>()
-    data class FlatAlt<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
-    data class Annotated<A>(val ann: A, val doc: Doc<A>) : DocF<A>()
-    data class WithPageWidth<A>(val doc: AndThen<PageWidth, Doc<A>>) : DocF<A>()
-
-    companion object
+public sealed class DocF<out A> {
+    public object Nil : DocF<Nothing>()
+    public object Fail : DocF<Nothing>()
+    public object Line : DocF<Nothing>()
+    public data class Text(val str: String) : DocF<Nothing>()
+    public data class Union<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
+    public data class Combined<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
+    public data class Nest<A>(val i: Int, val doc: Doc<A>) : DocF<A>()
+    public data class Column<A>(val doc: AndThen<Int, Doc<A>>) : DocF<A>()
+    public data class Nesting<A>(val doc: AndThen<Int, Doc<A>>) : DocF<A>()
+    public data class FlatAlt<A>(val l: Doc<A>, val r: Doc<A>) : DocF<A>()
+    public data class Annotated<A>(val ann: A, val doc: Doc<A>) : DocF<A>()
+    public data class WithPageWidth<A>(val doc: AndThen<PageWidth, Doc<A>>) : DocF<A>()
 }
 
-public data class Doc<out A> internal constructor(internal val unDoc: Eval<DocF<A>>) {
+public data class Doc<out A>(val unDoc: Eval<DocF<A>>) {
 
     override fun toString(): String = pretty()
 
-    internal fun <B> map(f: (A) -> B): Doc<B> = Doc(unDoc.andThen {
+    public fun <B> map(f: (A) -> B): Doc<B> = Doc(unDoc.andThen {
         when (it) {
             is DocF.Nil -> DocF.Nil
             is DocF.Fail -> DocF.Fail
