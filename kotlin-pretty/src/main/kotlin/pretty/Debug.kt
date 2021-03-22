@@ -1,10 +1,5 @@
 package pretty
 
-import arrow.core.AndThen
-import arrow.core.Eval
-import arrow.core.Tuple2
-import arrow.core.extensions.eval.applicative.applicative
-import arrow.core.toT
 
 sealed class Diag<out A> {
     object Fail : Diag<Nothing>() {
@@ -22,9 +17,9 @@ sealed class Diag<out A> {
     data class Union<A>(val l: Diag<A>, val r: Diag<A>): Diag<A>()
     data class Nest<A>(val i: Int, val doc: Diag<A>): Diag<A>()
     data class Annotated<A>(val ann: A, val doc: Diag<A>): Diag<A>()
-    data class WithPageWidth<A>(val sample: List<Tuple2<PageWidth, Diag<A>>>): Diag<A>()
-    data class Nesting<A>(val sample: List<Tuple2<Int, Diag<A>>>): Diag<A>()
-    data class Column<A>(val sample: List<Tuple2<Int, Diag<A>>>): Diag<A>()
+    data class WithPageWidth<A>(val sample: List<Pair<PageWidth, Diag<A>>>): Diag<A>()
+    data class Nesting<A>(val sample: List<Pair<Int, Diag<A>>>): Diag<A>()
+    data class Column<A>(val sample: List<Pair<Int, Diag<A>>>): Diag<A>()
 }
 
 // tailrec with cps if this ever overflows
@@ -32,7 +27,7 @@ fun <A> Doc<A>.diag(
     col: List<Int> = listOf(10),
     pw: List<PageWidth> = listOf(PageWidth.default()),
     nest: List<Int> = listOf(10)
-): Diag<A> = when (val dF = unDoc.value()) {
+): Diag<A> = when (val dF = unDoc()) {
     is DocF.Fail -> Diag.Fail
     is DocF.Nil -> Diag.Nil
     is DocF.Line -> Diag.Line
@@ -42,8 +37,8 @@ fun <A> Doc<A>.diag(
     is DocF.FlatAlt -> Diag.FlatAlt(dF.l.diag(col, pw, nest), dF.r.diag(col, pw, nest))
     is DocF.Union -> Diag.Union(dF.l.diag(col, pw, nest), dF.r.diag(col, pw, nest))
     is DocF.Combined -> Diag.Combined(dF.l.diag(col, pw, nest), dF.r.diag(col, pw, nest))
-    is DocF.WithPageWidth -> Diag.WithPageWidth(pw.map { it toT dF.doc(it).diag(col, pw, nest) })
-    is DocF.Column -> Diag.Column(col.map { it toT dF.doc(it).diag(col, pw, nest) })
-    is DocF.Nesting -> Diag.Nesting(nest.map { it toT dF.doc(it).diag(col, pw, nest) })
+    is DocF.WithPageWidth -> Diag.WithPageWidth(pw.map { it to dF.doc(it).diag(col, pw, nest) })
+    is DocF.Column -> Diag.Column(col.map { it to dF.doc(it).diag(col, pw, nest) })
+    is DocF.Nesting -> Diag.Nesting(nest.map { it to dF.doc(it).diag(col, pw, nest) })
 }
 

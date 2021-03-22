@@ -1,13 +1,5 @@
 package pretty
 
-import arrow.Kind
-import arrow.core.*
-import arrow.core.extensions.list.foldable.foldRight
-import arrow.core.extensions.sequence.zip.zipWith
-import arrow.syntax.collections.tail
-import arrow.typeclasses.Foldable
-import arrow.core.extensions.sequence.repeat.repeat as repeatSeq
-import pretty.doc.functor.functor
 import pretty.symbols.*
 
 fun <A> Doc<A>.renderPretty(): SimpleDoc<A> = layoutPretty(PageWidth.Available(80, 0.4F))
@@ -32,43 +24,45 @@ fun hardLine(): Doc<Nothing> = Doc(Eval.now(DocF.Line))
 
 fun <A> Doc<A>.nest(i: Int): Doc<A> = Doc(Eval.now(DocF.Nest(i, this)))
 
-fun <A> Doc<A>.group(): Doc<A> = changesUponFlattening().fold({ this }, {
+fun <A> Doc<A>.group(): Doc<A> = changesUponFlattening()?.let {
     Doc(Eval.now(DocF.Union(it, this@group)))
-})
+} ?: this
 
-fun <A> Doc<A>.changesUponFlattening(): Option<Doc<A>> {
-    fun Doc<A>.go(): Eval<Option<Doc<A>>> =
-        when (val dF = unDoc.value()) {
-            is DocF.FlatAlt -> Eval.now(dF.r.flatten().some())
-            is DocF.Line -> Eval.now(Doc<A>(Eval.now(DocF.Fail)).some())
-            is DocF.Union -> Eval.now(dF.l.some())
-            is DocF.Nest -> dF.doc.go().map { it.map { Doc(Eval.now(DocF.Nest(dF.i, it))) } }
-            is DocF.Annotated -> dF.doc.go().map { it.map { Doc(Eval.now(DocF.Annotated(dF.ann, it))) } }
+fun <A> Doc<A>.changesUponFlattening(): Doc<A>? {
+    fun Doc<A>.go(): Eval<Doc<A>?> =
+        when (val dF = unDoc()) {
+            is DocF.FlatAlt -> Eval.now(dF.r.flatten())
+            is DocF.Line -> Eval.now(Doc<A>(Eval.now(DocF.Fail)))
+            is DocF.Union -> Eval.now(dF.l)
+            is DocF.Nest -> dF.doc.go().andThen { it?.let { Doc(Eval.now(DocF.Nest(dF.i, it))) } }
+            is DocF.Annotated -> dF.doc.go().andThen { it?.let { Doc(Eval.now(DocF.Annotated(dF.ann, it))) } }
 
-            is DocF.Column -> Eval.now(Doc(Eval.now(DocF.Column(AndThen(dF.doc).andThen { it.flatten() }))).some())
-            is DocF.Nesting -> Eval.now(Doc(Eval.now(DocF.Nesting(AndThen(dF.doc).andThen { it.flatten() }))).some())
-            is DocF.WithPageWidth -> Eval.now(Doc(Eval.now(DocF.WithPageWidth(AndThen(dF.doc).andThen { it.flatten() }))).some())
+            is DocF.Column -> Eval.now(Doc(Eval.now(DocF.Column(AndThen(dF.doc).andThen { it.flatten() }))))
+            is DocF.Nesting -> Eval.now(Doc(Eval.now(DocF.Nesting(AndThen(dF.doc).andThen { it.flatten() }))))
+            is DocF.WithPageWidth -> Eval.now(Doc(Eval.now(DocF.WithPageWidth(AndThen(dF.doc).andThen { it.flatten() }))))
 
             is DocF.Combined -> {
                 val lEval = Eval.defer { dF.l.go() }
                 val rEval = Eval.defer { dF.r.go() }
-                lEval.flatMap { l -> l.fold({
-                    rEval.map { r -> r.fold({ None }, { rD ->
-                        Doc(Eval.now(DocF.Combined(dF.l, rD))).some()
-                    }) }
-                }, { lD ->
-                    rEval.map { r -> r.fold({
-                        Doc(Eval.now(DocF.Combined(lD, dF.r))).some()
-                    }, { rD ->
-                        Doc(Eval.now(DocF.Combined(lD, rD))).some()
-                    }) }
-                }) }
+                lEval.flatMap { l ->
+                    l?.let { lD ->
+                        rEval.andThen { r ->
+                            r?.let { rD ->
+                                Doc(Eval.now(DocF.Combined(lD, rD)))
+                            } ?: Doc(Eval.now(DocF.Combined(lD, dF.r)))
+                        }
+                    } ?: rEval.andThen { r ->
+                        r?.let { rD ->
+                            Doc(Eval.now(DocF.Combined(dF.l, rD)))
+                        } ?: null
+                    }
+                }
             }
 
-            else -> Eval.now(None)
+            else -> Eval.now(null)
         }
 
-    return go().value()
+    return go().invoke()
 }
 
 fun <A> Doc<A>.flatten(): Doc<A> = Doc(unDoc.flatMap {
@@ -96,15 +90,14 @@ fun <A> Doc<A>.flatAlt(other: Doc<A>): Doc<A> = Doc(Eval.now(DocF.FlatAlt(this, 
 
 fun <A> Doc<A>.annotate(ann: A): Doc<A> = Doc(Eval.now(DocF.Annotated(ann, this)))
 
-fun <A, B> Doc<A>.reAnnotate(f: (A) -> B): Doc<B> = Doc.functor().run {
-    map(f).fix()
-}
+fun <A, B> Doc<A>.reAnnotate(f: (A) -> B): Doc<B> = map(f)
 
+// TODO Is this recursive bit safe?
 fun <A, B> Doc<A>.alterAnnotations(f: (A) -> List<B>): Doc<B> = Doc(unDoc.flatMap {
     when (it) {
-        is DocF.Annotated -> f(it.ann).foldRight(Eval.now(it.doc.alterAnnotations(f))) { v, acc ->
-            acc.map { it.annotate(v) }
-        }.value().unDoc
+        is DocF.Annotated -> f(it.ann).fold(it.doc.alterAnnotations(f)) { doc, ann ->
+            Doc(Eval.now(DocF.Annotated(ann, doc)))
+        }.unDoc
         is DocF.Text -> Eval.now(DocF.Text(it.str))
         is DocF.Union -> Eval.now(DocF.Union(it.l.alterAnnotations(f), it.r.alterAnnotations(f)))
         is DocF.Combined -> Eval.now(DocF.Combined(it.l.alterAnnotations(f), it.r.alterAnnotations(f)))
@@ -177,22 +170,18 @@ fun <A> List<Doc<A>>.semiBraces(): Doc<A> = encloseSep(
 fun <A> List<Doc<A>>.encloseSep(l: Doc<A>, r: Doc<A>, sep: Doc<A>): Doc<A> = when {
     isEmpty() -> l + r
     size == 1 -> l + first() + r
-    else -> (sequenceOf(l) + repeatSeq(sep))
-        .zipWith(this.asSequence()) { a, b -> a + b }.toList().cat() + r
+    else -> (sequenceOf(l) + repeat(sep))
+        .zip(this.asSequence()) { a, b -> a + b }.toList().cat() + r
 }
+
+private fun <A> repeat(a: A): Sequence<A> = generateSequence { a }
 
 fun <A> List<Doc<A>>.punctuate(p: Doc<A>): List<Doc<A>> = when {
     isEmpty() -> emptyList()
     size == 1 -> listOf(first())
-    else -> (first() toT tail()).let { (x, xs) ->
+    else -> (first() to tail()).let { (x, xs) ->
         listOf(x + p) + xs.punctuate(p)
     }
-}
-
-fun <F, A> Kind<F, Doc<A>>.foldDoc(FF: Foldable<F>, f: (Doc<A>, Doc<A>) -> Doc<A>): Doc<A> = FF.run {
-    foldRight<Doc<A>, Doc<A>>(Eval.now(nil())) { v, acc ->
-        acc.map { f(v, it) }
-    }.value()
 }
 
 fun <A> List<Doc<A>>.foldDoc(f: (Doc<A>, Doc<A>) -> Doc<A>): Doc<A> = when {

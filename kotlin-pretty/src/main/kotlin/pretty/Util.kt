@@ -19,3 +19,5 @@ fun <A> Doc<A>.testDoc(maxW: Int): Unit =
         layoutPretty(PageWidth.Available(maxW, 1F))
             .renderString()
     )
+
+internal fun <A> List<A>.tail(): List<A> = drop(1)
