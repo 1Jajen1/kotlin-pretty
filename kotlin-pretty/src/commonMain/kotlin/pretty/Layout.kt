@@ -1,17 +1,14 @@
 package pretty
 
-import arrow.core.*
-import arrow.core.extensions.fx
-import arrow.syntax.collections.tail
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
 
-typealias FittingFun<A> = SimpleDoc<A>.(pageWidth: PageWidth, minNesting: Int, availableWidth: Int) -> Boolean
+internal typealias FittingFun<A> = SimpleDoc<A>.(pageWidth: PageWidth, minNesting: Int, availableWidth: Int) -> Boolean
 
-fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { _, _, avail ->
+public fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { _, _, avail ->
     tailrec fun <A> SimpleDoc<A>.test(i: Int): Boolean =
-        if (i < 0) false else when (val dF = unDoc.value()) {
+        if (i < 0) false else when (val dF = unDoc()) {
             is SimpleDocF.Text -> dF.doc.test(i - dF.str.length)
             is SimpleDocF.AddAnnotation -> dF.doc.test(i)
             is SimpleDocF.RemoveAnnotation -> dF.doc.test(i)
@@ -22,9 +19,9 @@ fun <A> Doc<A>.layoutPretty(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLe
     test(avail)
 }
 
-fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { pw, minNest, avail ->
+public fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLeijen(pageWidth) { pw, minNest, avail ->
     tailrec fun <A> SimpleDoc<A>.test(pw: PageWidth, m: Int, w: Int): Boolean =
-        if (w < 0) false else when (val dF = unDoc.value()) {
+        if (w < 0) false else when (val dF = unDoc()) {
             is SimpleDocF.Fail -> false
             is SimpleDocF.Nil -> true
             is SimpleDocF.RemoveAnnotation -> dF.doc.test(pw, m, w)
@@ -40,7 +37,7 @@ fun <A> Doc<A>.layoutSmart(pageWidth: PageWidth): SimpleDoc<A> = layoutWadlerLei
     test(pw, minNest, avail)
 }
 
-fun <A> Doc<A>.layoutWadlerLeijen(
+private fun <A> Doc<A>.layoutWadlerLeijen(
     pageWidth: PageWidth,
     fits: FittingFun<A>
 ): SimpleDoc<A> {
@@ -62,26 +59,25 @@ fun <A> Doc<A>.layoutWadlerLeijen(
             is PageWidth.Unbounded -> if (x.hasFailOnFirstLine()) y else x
         }
 
-    // TODO Benchmark this against cata
     // TODO Add tests how lazy this is, or if laziness is a benefit to Doc at all
-    fun lBest(nl: Int, cc: Int, xs: List<Option<Tuple2<Int, Doc<A>>>>): SimpleDoc<A> = SimpleDoc(Eval.defer {
+    fun lBest(nl: Int, cc: Int, xs: List<Pair<Int, Doc<A>>?>): SimpleDoc<A> = SimpleDoc(Eval.defer {
         if (xs.isEmpty()) Eval.now(SimpleDocF.Nil)
-        else xs.first().fold({ Eval.later { SimpleDocF.RemoveAnnotation(lBest(nl, cc, xs.tail())) } }, { (i, fst) ->
+        else xs.first()?.let { (i, fst) ->
             fst.unDoc.flatMap {
                 when (val curr = it) {
                     is DocF.Fail -> Eval.now(SimpleDocF.Fail)
                     is DocF.Nil -> lBest(nl, cc, xs.tail()).unDoc
                     is DocF.Text -> Eval.later { SimpleDocF.Text(curr.str, lBest(nl, cc + curr.str.length, xs.tail())) }
                     is DocF.Line -> Eval.later { SimpleDocF.Line(i, lBest(i, i, xs.tail())) }
-                    is DocF.FlatAlt -> lBest(nl, cc, listOf((i toT curr.l).some()) + xs.tail()).unDoc
+                    is DocF.FlatAlt -> lBest(nl, cc, listOf((i to curr.l)) + xs.tail()).unDoc
                     is DocF.Combined -> lBest(
                         nl, cc,
-                        listOf((i toT curr.l).some(), (i toT curr.r).some()) + xs.tail()
+                        listOf((i to curr.l), (i to curr.r)) + xs.tail()
                     ).unDoc
-                    is DocF.Nest -> lBest(nl, cc, listOf(((i + curr.i) toT curr.doc).some()) + xs.tail()).unDoc
+                    is DocF.Nest -> lBest(nl, cc, listOf(((i + curr.i) to curr.doc)) + xs.tail()).unDoc
                     is DocF.Union -> {
-                        val lEval = lBest(nl, cc, listOf((i toT curr.l).some()) + xs.tail()).unDoc
-                        val rEval = lBest(nl, cc, listOf((i toT curr.r).some()) + xs.tail()).unDoc
+                        val lEval = lBest(nl, cc, listOf((i to curr.l)) + xs.tail()).unDoc
+                        val rEval = lBest(nl, cc, listOf((i to curr.r)) + xs.tail()).unDoc
                         lEval.flatMap { l ->
                             rEval.flatMap { r ->
                                 selectNicer(
@@ -93,32 +89,32 @@ fun <A> Doc<A>.layoutWadlerLeijen(
                             }
                         }
                     }
-                    is DocF.Column -> lBest(nl, cc, listOf((i toT curr.doc(cc)).some()) + xs.tail()).unDoc
-                    is DocF.Nesting -> lBest(nl, cc, listOf((i toT curr.doc(i)).some()) + xs.tail()).unDoc
+                    is DocF.Column -> lBest(nl, cc, listOf((i to curr.doc(cc))) + xs.tail()).unDoc
+                    is DocF.Nesting -> lBest(nl, cc, listOf((i to curr.doc(i))) + xs.tail()).unDoc
                     is DocF.WithPageWidth -> lBest(
                         nl,
                         cc,
-                        listOf((i toT curr.doc(pageWidth)).some()) + xs.tail()
+                        listOf((i to curr.doc(pageWidth))) + xs.tail()
                     ).unDoc
                     is DocF.Annotated -> Eval.later {
                         SimpleDocF.AddAnnotation(
                             curr.ann,
-                            lBest(nl, cc, listOf((i toT curr.doc).some(), None) + xs.tail())
+                            lBest(nl, cc, listOf((i to curr.doc), null) + xs.tail())
                         )
                     }
                 }
             }
-        })
+        } ?: Eval.later { SimpleDocF.RemoveAnnotation(lBest(nl, cc, xs.tail())) }
     })
 
-    return lBest(0, 0, listOf((0 toT this).some()))
+    return lBest(0, 0, listOf((0 to this)))
 }
 
-fun <A> Doc<A>.layoutCompact(): SimpleDoc<A> {
+public fun <A> Doc<A>.layoutCompact(): SimpleDoc<A> {
     fun scan(i: Int, ls: List<Doc<A>>): SimpleDoc<A> =
         if (ls.isEmpty()) SimpleDoc.nil()
         else {
-            val (x, xs) = (ls.first() toT ls.tail())
+            val (x, xs) = (ls.first() to ls.tail())
             SimpleDoc(
                 x.unDoc.flatMap {
                     when (val dF = it) {
@@ -141,15 +137,15 @@ fun <A> Doc<A>.layoutCompact(): SimpleDoc<A> {
     return scan(0, listOf(this))
 }
 
-tailrec fun <A> SimpleDoc<A>.startsWithLine(): Boolean =
-    when (val dF = unDoc.value()) {
+private tailrec fun <A> SimpleDoc<A>.startsWithLine(): Boolean =
+    when (val dF = unDoc()) {
         is SimpleDocF.Line -> true
         is SimpleDocF.AddAnnotation -> dF.doc.startsWithLine()
         is SimpleDocF.RemoveAnnotation -> dF.doc.startsWithLine()
         else -> false
     }
 
-tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc.value()) {
+private tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc()) {
     is SimpleDocF.Fail -> true
     is SimpleDocF.Nil -> false
     is SimpleDocF.RemoveAnnotation -> dF.doc.hasFail()
@@ -158,7 +154,7 @@ tailrec fun <A> SimpleDoc<A>.hasFail(): Boolean = when (val dF = unDoc.value()) 
     is SimpleDocF.Text -> dF.doc.hasFail()
 }
 
-tailrec fun <A> SimpleDoc<A>.hasFailOnFirstLine(): Boolean = when (val dF = unDoc.value()) {
+private tailrec fun <A> SimpleDoc<A>.hasFailOnFirstLine(): Boolean = when (val dF = unDoc()) {
     is SimpleDocF.Fail -> true
     is SimpleDocF.Nil -> false
     is SimpleDocF.RemoveAnnotation -> dF.doc.hasFailOnFirstLine()

@@ -1,0 +1,49 @@
+def nativeTargets = [
+        "androidNativeArm32", "androidNativeArm64",
+        "iosArm32", "iosArm64", "iosX64",
+        "watchosArm32", "watchosArm64", "watchosX86", "watchosX64",
+        "tvosArm64", "tvosX64",
+        "macosX64",
+        "linuxArm64", "linuxArm32Hfp", "linuxMips32", "linuxMipsel32", "linuxX64",
+        "mingwX64", "mingwX86",
+        "wasm32"
+]
+
+kotlin {
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+            }
+        }
+        create("nativeMain") {
+            dependsOn commonMain
+        }
+    }
+
+    jvm {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "1.8"
+            }
+        }
+    }
+    js {
+        nodejs {}
+        binaries.executable()
+    }
+
+    nativeTargets.forEach {
+        targetFromPreset(presets[it]) {
+            compilations.getByName("main") {
+                defaultSourceSet.dependsOn(sourceSets["nativeMain"])
+            }
+        }
+    }
+}

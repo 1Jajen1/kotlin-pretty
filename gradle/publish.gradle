@@ -1,103 +1,60 @@
+import org.apache.tools.ant.taskdefs.condition.Os
 
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
 
-def findProperty(String key) {
-    [project.properties[key], System.getenv(key)].find { it != null }
+def windowsPublications = ["mingwX64", "mingwX86"]
+def macosPublications = kotlin.targets.names.findAll {
+    it.startsWith("macos") || it.startsWith("ios") || it.startsWith("watchos") || it.startsWith("tvos")
+}
+def linuxPublications = publishing.publications.names - macosPublications - windowsPublications
+
+def publicationsFromThisPlatform = {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) return windowsPublications
+    else if (Os.isFamily(Os.FAMILY_MAC)) return macosPublications
+    else if (Os.isFamily(Os.FAMILY_UNIX)) return linuxPublications
+    else error("Expected either a windows, mac or linux host")
 }
 
-def getReleaseRepositoryUrl() {
-    return findProperty('RELEASE_REPOSITORY_URL') ?: "https://api.bintray.com/maven/jannis/kotlin-pretty/kotlin-pretty"
-}
-
-def getRepositoryUsername() {
-    return findProperty('BINTRAY_USER') ?: "no.bintray.user"
-}
-
-def getRepositoryPassword() {
-    return findProperty('BINTRAY_KEY') ?: "no.bintray.api.key"
-}
-
-uploadArchives {
-    repositories.mavenDeployer {
-        pom.groupId = GROUP
-        pom.artifactId = POM_ARTIFACT_ID
-        pom.version = VERSION_NAME
-
-        repository(url: getReleaseRepositoryUrl()) {
-            authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
-        }
-
-        pom.project {
-            name POM_NAME
-            packaging POM_PACKAGING
-            description POM_DESCRIPTION
-            url POM_URL
-
-            scm {
-                url POM_SCM_URL
-                connection POM_SCM_CONNECTION
-                developerConnection POM_SCM_DEV_CONNECTION
-            }
-
-            licenses {
-                license {
-                    name POM_LICENCE_NAME
-                    url POM_LICENCE_URL
-                    distribution POM_LICENCE_DIST
+kotlin {
+    publishing {
+        repositories {
+            maven {
+                credentials {
+                    username "$System.env.BINTRAY_USER"
+                    password "$System.env.BINTRAY_API_KEY"
                 }
-            }
-
-            developers {
-                developer {
-                    id POM_DEVELOPER_ID
-                    name POM_DEVELOPER_NAME
-                }
+                url = RELEASE_REPOSITORY
             }
         }
-    }
-}
-
-install {
-    repositories.mavenInstaller {
-        pom.groupId = GROUP
-        pom.artifactId = POM_ARTIFACT_ID
-        pom.version = VERSION_NAME
-
-        pom.project {
-            name POM_NAME
-            packaging POM_PACKAGING
-            description POM_DESCRIPTION
-            url POM_URL
-
-            scm {
-                url POM_SCM_URL
-                connection POM_SCM_CONNECTION
-                developerConnection POM_SCM_DEV_CONNECTION
-            }
-
-            licenses {
-                license {
-                    name POM_LICENCE_NAME
-                    url POM_LICENCE_URL
-                    distribution POM_LICENCE_DIST
+        def targetPublications = publicationsFromThisPlatform()
+        tasks.withType(AbstractPublishToMaven)
+                .configureEach {
+                    onlyIf { it.publication.name in targetPublications }
                 }
-            }
-
-            developers {
-                developer {
-                    id POM_DEVELOPER_ID
-                    name POM_DEVELOPER_NAME
+        publications.withType(MavenPublication).all {
+            pom {
+                name = POM_NAME
+                description = POM_DESCRIPTION
+                url = POM_URL
+                scm {
+                    url = POM_SCM_URL
+                    connection = POM_SCM_CONNECTION
+                    developerConnection = POM_SCM_DEV_CONNECTION
+                }
+                licenses {
+                    license {
+                        name = POM_LICENCE_NAME
+                        url = POM_LICENCE_URL
+                        distribution = POM_LICENCE_DIST
+                    }
+                }
+                developers {
+                    developer {
+                        name = "Jannis"
+                    }
                 }
             }
         }
     }
-}
-
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource + 'build/generated/source/kapt/main', 'build/generated/source/kaptKotlin/main'
-}
-
-artifacts {
-    archives sourcesJar
 }

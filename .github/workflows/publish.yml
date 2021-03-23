@@ -1,12 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+  release:
+    types:
+      - released
 
 jobs:
   build:
@@ -25,4 +22,4 @@ jobs:
     - name: Build
       run: |
         chmod +x gradlew
-        ./gradlew build
+        env BINTRAY_USER=jannis BINTRAY_API_KEY=${{ secrets.BINTRAY_API_KEY }} ./gradlew publish

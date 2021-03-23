@@ -1,3 +1,5 @@
 rootProject.name = 'kotlin-prettify'
 
+enableFeaturePreview("GRADLE_METADATA")
+
 include 'kotlin-pretty', 'kotlin-pretty-ansi'

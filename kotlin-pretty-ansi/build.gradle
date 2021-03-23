@@ -1,28 +1,12 @@
-
-apply plugin: 'kotlin-kapt'
-
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-
-    implementation "io.arrow-kt:arrow-core:$arrow_version"
-    implementation "io.arrow-kt:arrow-fx:$arrow_version"
-    api project(":kotlin-pretty")
-
-    kapt "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
-    kaptTest "io.arrow-kt:arrow-meta:$arrow_version" // auto generation for @extension and @higherkind
-
-    testImplementation "propCheck:propCheck-kt:0.10.0"
-
-    testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2") {
-        exclude group: "io.arrow-kt"
-    }
-    testImplementation("io.arrow-kt:arrow-core-test:$arrow_version") { // test helpers and laws
-        exclude group: "io.kotlintest"
-    }
-}
-
-test {
-    useJUnitPlatform()
-}
-
+apply from: rootProject.file('gradle/targets.gradle')
 apply from: rootProject.file('gradle/publish.gradle')
+
+kotlin {
+    sourceSets {
+        commonMain {
+            dependencies {
+                api project(':kotlin-pretty')
+            }
+        }
+    }
+}
