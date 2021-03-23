@@ -24,7 +24,7 @@ jobs:
 
     # ank
     - name: setup-java
-      uses: actions/setup-java@v1.3.0
+      uses: actions/setup-java@v1
       with:
         java-version: 1.8
 
