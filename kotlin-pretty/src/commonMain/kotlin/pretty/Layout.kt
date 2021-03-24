@@ -1,5 +1,7 @@
 package pretty
 
+import pretty.lazy.Eval
+import pretty.lazy.flatMap
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round

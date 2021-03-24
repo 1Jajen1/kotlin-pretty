@@ -1,5 +1,10 @@
 package pretty
 
+import pretty.lazy.AndThen
+import pretty.lazy.Eval
+import pretty.lazy.flatMap
+import pretty.lazy.map
+
 public sealed class DocF<out A> {
     public object Nil : DocF<Nothing>()
     public object Fail : DocF<Nothing>()
@@ -15,11 +20,10 @@ public sealed class DocF<out A> {
     public data class WithPageWidth<A>(val doc: AndThen<PageWidth, Doc<A>>) : DocF<A>()
 }
 
-public data class Doc<out A>(val unDoc: Eval<DocF<A>>) {
+public class Doc<out A>(eval: Eval<DocF<A>>) {
+    public val unDoc: Eval<DocF<A>> = eval.memo()
 
-    override fun toString(): String = pretty()
-
-    public fun <B> map(f: (A) -> B): Doc<B> = Doc(unDoc.andThen {
+    public fun <B> map(f: (A) -> B): Doc<B> = Doc(unDoc.map {
         when (it) {
             is DocF.Nil -> DocF.Nil
             is DocF.Fail -> DocF.Fail
@@ -45,19 +49,21 @@ public operator fun <A> Doc<A>.plus(other: Doc<A>): Doc<A> = Doc(Eval.now(DocF.C
 
 public fun <A> Doc<A>.fuse(shallow: Boolean = true): Doc<A> = Doc(unDoc.flatMap {
     when (it) {
-        is DocF.Combined -> it.l.fuse(shallow).unDoc.flatMap { lF ->
-            it.r.fuse(shallow).unDoc.andThen { rF ->
-                when {
-                    lF is DocF.Text && rF is DocF.Text -> DocF.Text(lF.str + rF.str)
-                    lF is DocF.Nil -> rF
-                    rF is DocF.Nil -> lF
-                    else -> DocF.Combined(Doc(Eval.now(lF)), Doc(Eval.now(rF)))
+        is DocF.Combined -> Eval.defer {
+            it.l.fuse(shallow).unDoc.flatMap { lF ->
+                it.r.fuse(shallow).unDoc.map { rF ->
+                    when {
+                        lF is DocF.Text && rF is DocF.Text -> DocF.Text(lF.str + rF.str)
+                        lF is DocF.Nil -> rF
+                        rF is DocF.Nil -> lF
+                        else -> DocF.Combined(Doc(Eval.now(lF)), Doc(Eval.now(rF)))
+                    }
                 }
             }
         }
         is DocF.Nest ->
             if (it.i == 0) it.doc.unDoc
-            else it.doc.unDoc.andThen { mn ->
+            else it.doc.unDoc.map { mn ->
                 if (mn is DocF.Nest) DocF.Nest(it.i + mn.i, mn.doc)
                 else DocF.Nest(it.i, it.doc)
             }

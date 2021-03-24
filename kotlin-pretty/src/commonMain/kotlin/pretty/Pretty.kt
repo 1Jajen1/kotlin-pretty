@@ -1,5 +1,9 @@
 package pretty
 
+import pretty.lazy.AndThen
+import pretty.lazy.Eval
+import pretty.lazy.flatMap
+import pretty.lazy.map
 import pretty.symbols.*
 
 public fun <A> Doc<A>.renderPretty(): SimpleDoc<A> = layoutPretty(PageWidth.Available(80, 0.4F))
@@ -24,18 +28,22 @@ public fun hardLine(): Doc<Nothing> = Doc(Eval.now(DocF.Line))
 
 public fun <A> Doc<A>.nest(i: Int): Doc<A> = Doc(Eval.now(DocF.Nest(i, this)))
 
-public fun <A> Doc<A>.group(): Doc<A> = changesUponFlattening()?.let {
-    Doc(Eval.now(DocF.Union(it, this@group)))
-} ?: this
+// TODO Rework and benchmark
+public fun <A> Doc<A>.group(): Doc<A> = when (val dF = unDoc()) {
+    is DocF.Union -> this
+    else -> changesUponFlattening()?.let {
+        Doc(Eval.now(DocF.Union(it, this@group)))
+    } ?: this
+}
 
-private fun <A> Doc<A>.changesUponFlattening(): Doc<A>? {
+internal fun <A> Doc<A>.changesUponFlattening(): Doc<A>? {
     fun Doc<A>.go(): Eval<Doc<A>?> =
         when (val dF = unDoc()) {
             is DocF.FlatAlt -> Eval.now(dF.r.flatten())
             is DocF.Line -> Eval.now(Doc<A>(Eval.now(DocF.Fail)))
             is DocF.Union -> Eval.now(dF.l)
-            is DocF.Nest -> dF.doc.go().andThen { it?.let { Doc(Eval.now(DocF.Nest(dF.i, it))) } }
-            is DocF.Annotated -> dF.doc.go().andThen { it?.let { Doc(Eval.now(DocF.Annotated(dF.ann, it))) } }
+            is DocF.Nest -> Eval.defer { dF.doc.go().map { it?.let { Doc(Eval.now(DocF.Nest(dF.i, it))) } } }
+            is DocF.Annotated -> Eval.defer { dF.doc.go().map { it?.let { Doc(Eval.now(DocF.Annotated(dF.ann, it))) } } }
 
             is DocF.Column -> Eval.now(Doc(Eval.now(DocF.Column(dF.doc.andThen { it.flatten() }))))
             is DocF.Nesting -> Eval.now(Doc(Eval.now(DocF.Nesting(dF.doc.andThen { it.flatten() }))))
@@ -45,15 +53,13 @@ private fun <A> Doc<A>.changesUponFlattening(): Doc<A>? {
                 val lEval = Eval.defer { dF.l.go() }
                 val rEval = Eval.defer { dF.r.go() }
                 lEval.flatMap { l ->
-                    l?.let { lD ->
-                        rEval.andThen { r ->
-                            r?.let { rD ->
-                                Doc(Eval.now(DocF.Combined(lD, rD)))
-                            } ?: Doc(Eval.now(DocF.Combined(lD, dF.r)))
-                        }
-                    } ?: rEval.andThen { r ->
-                        r?.let { rD ->
-                            Doc(Eval.now(DocF.Combined(dF.l, rD)))
+                    rEval.map { r ->
+                        if (l != null) {
+                            if (r != null) Doc(Eval.now(DocF.Combined(l, r)))
+                            else Doc(Eval.now(DocF.Combined(l, dF.r)))
+                        } else {
+                            if (r != null) Doc(Eval.now(DocF.Combined(dF.l, r)))
+                            else null
                         }
                     }
                 }
@@ -65,13 +71,13 @@ private fun <A> Doc<A>.changesUponFlattening(): Doc<A>? {
     return go().invoke()
 }
 
-public fun <A> Doc<A>.flatten(): Doc<A> = Doc(unDoc.flatMap {
+internal fun <A> Doc<A>.flatten(): Doc<A> = Doc(unDoc.flatMap {
     when (it) {
-        is DocF.FlatAlt -> it.r.flatten().unDoc
-        is DocF.Union -> it.l.flatten().unDoc
-        is DocF.Nest -> Eval.now(it.copy(doc = it.doc.flatten()))
-        is DocF.Combined -> Eval.now(it.copy(l = it.l.flatten(), r = it.r.flatten()))
-        is DocF.Annotated -> Eval.now(it.copy(doc = it.doc.flatten()))
+        is DocF.FlatAlt -> Eval.defer { it.r.flatten().unDoc }
+        is DocF.Union -> Eval.defer { it.l.flatten().unDoc }
+        is DocF.Nest -> Eval.later { it.copy(doc = it.doc.flatten()) }
+        is DocF.Combined -> Eval.later { it.copy(l = it.l.flatten(), r = it.r.flatten()) }
+        is DocF.Annotated -> Eval.later { it.copy(doc = it.doc.flatten()) }
         is DocF.WithPageWidth -> Eval.now(DocF.WithPageWidth(it.doc.andThen { it.flatten() }))
         is DocF.Column -> Eval.now(DocF.Column(it.doc.andThen { it.flatten() }))
         is DocF.Nesting -> Eval.now(DocF.Nesting(it.doc.andThen { it.flatten() }))
@@ -95,17 +101,19 @@ public fun <A, B> Doc<A>.reAnnotate(f: (A) -> B): Doc<B> = map(f)
 // TODO Is this recursive bit safe?
 public fun <A, B> Doc<A>.alterAnnotations(f: (A) -> List<B>): Doc<B> = Doc(unDoc.flatMap {
     when (it) {
-        is DocF.Annotated -> f(it.ann).fold(it.doc.alterAnnotations(f)) { doc, ann ->
-            Doc(Eval.now(DocF.Annotated(ann, doc)))
-        }.unDoc
+        is DocF.Annotated -> Eval.defer {
+            f(it.ann).fold(it.doc.alterAnnotations(f)) { doc, ann ->
+                Doc(Eval.now(DocF.Annotated(ann, doc)))
+            }.unDoc
+        }
         is DocF.Text -> Eval.now(DocF.Text(it.str))
-        is DocF.Union -> Eval.now(DocF.Union(it.l.alterAnnotations(f), it.r.alterAnnotations(f)))
-        is DocF.Combined -> Eval.now(DocF.Combined(it.l.alterAnnotations(f), it.r.alterAnnotations(f)))
-        is DocF.WithPageWidth -> Eval.now(DocF.WithPageWidth(it.doc.andThen { it.alterAnnotations(f) }))
-        is DocF.Column -> Eval.now(DocF.Column(it.doc.andThen { it.alterAnnotations(f) }))
-        is DocF.Nesting -> Eval.now(DocF.Nesting(it.doc.andThen { it.alterAnnotations(f) }))
-        is DocF.Nest -> Eval.now(DocF.Nest(it.i, it.doc.alterAnnotations(f)))
-        is DocF.FlatAlt -> Eval.now(DocF.FlatAlt(it.l.alterAnnotations(f), it.r.alterAnnotations(f)))
+        is DocF.Union -> Eval.later { DocF.Union(it.l.alterAnnotations(f), it.r.alterAnnotations(f)) }
+        is DocF.Combined -> Eval.later { DocF.Combined(it.l.alterAnnotations(f), it.r.alterAnnotations(f)) }
+        is DocF.WithPageWidth -> Eval.later { DocF.WithPageWidth(it.doc.andThen { it.alterAnnotations(f) }) }
+        is DocF.Column -> Eval.later { DocF.Column(it.doc.andThen { it.alterAnnotations(f) }) }
+        is DocF.Nesting -> Eval.later { DocF.Nesting(it.doc.andThen { it.alterAnnotations(f) }) }
+        is DocF.Nest -> Eval.later { DocF.Nest(it.i, it.doc.alterAnnotations(f)) }
+        is DocF.FlatAlt -> Eval.later { DocF.FlatAlt(it.l.alterAnnotations(f), it.r.alterAnnotations(f)) }
         is DocF.Line -> Eval.now(DocF.Line)
         is DocF.Nil -> Eval.now(DocF.Nil)
         is DocF.Fail -> Eval.now(DocF.Fail)
@@ -145,7 +153,7 @@ public fun <A> List<Doc<A>>.list(): Doc<A> = encloseSep(
     (lBracket() + space()).flatAlt(
         lBracket()
     ),
-    (rBracket() + space()).flatAlt(
+    (hardLine() + rBracket()).flatAlt(
         rBracket()
     ),
     comma() + space()
@@ -153,13 +161,13 @@ public fun <A> List<Doc<A>>.list(): Doc<A> = encloseSep(
 
 public fun <A> List<Doc<A>>.tupled(): Doc<A> = encloseSep(
     (lParen() + space()).flatAlt(lParen()),
-    (rParen() + space()).flatAlt(rParen()),
+    (hardLine() + rParen()).flatAlt(rParen()),
     comma() + space()
 ).group()
 
 public fun <A> List<Doc<A>>.semiBraces(): Doc<A> = encloseSep(
     (lBrace() + space()).flatAlt(lBrace()),
-    (rBrace() + space()).flatAlt(rBrace()),
+    (hardLine() + rBrace()).flatAlt(rBrace()),
     comma() + space()
 ).group()
 

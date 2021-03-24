@@ -1,5 +1,9 @@
 package pretty
 
+import pretty.lazy.AndThen
+import pretty.lazy.Eval
+import pretty.lazy.flatMap
+
 public sealed class SimpleDocF<out A> {
     public object Fail : SimpleDocF<Nothing>()
     public object Nil : SimpleDocF<Nothing>()
@@ -9,9 +13,8 @@ public sealed class SimpleDocF<out A> {
     public data class RemoveAnnotation<A>(val doc: SimpleDoc<A>) : SimpleDocF<A>()
 }
 
-public data class SimpleDoc<out A>(val unDoc: Eval<SimpleDocF<A>>) {
-
-    override fun toString(): String = "SimpleDoc(unDoc=${unDoc()})"
+public class SimpleDoc<out A>(eval: Eval<SimpleDocF<A>>) {
+    public val unDoc: Eval<SimpleDocF<A>> = eval.memo()
 
     public companion object {
         public fun fail(): SimpleDoc<Nothing> = SimpleDoc(Eval.now(SimpleDocF.Fail))

@@ -1,14 +1,7 @@
-package pretty
+package pretty.lazy
 
-public typealias Eval<A> = AndThen<Unit, A>
-
-public fun <A> AndThen.Companion.now(a: A): Eval<A> = AndThen { a }
-public fun <A> AndThen.Companion.later(f: () -> A): Eval<A> = AndThen.Single({ f() }, 0)
-public fun <A> AndThen.Companion.defer(f: () -> Eval<A>): Eval<A> =
-    AndThen.Single<Unit, AndThen<Unit, A>>({ f() }, 0).flatMap { it }
-
-public operator fun <A> Eval<A>.invoke(): A = invoke(Unit)
-
+// Copypasta from arrow-core
+// See https://github.com/arrow-kt/arrow/blob/d2e0c0c86413c219727b7e318b0c121fe6f9cb47/arrow-libs/core/arrow-core-data/src/main/kotlin/arrow/core/AndThen.kt
 public sealed class AndThen<in A, out B> {
 
     internal class Single<A, B>(val f: (A) -> B, val index: Int) : AndThen<A, B>()
