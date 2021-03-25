@@ -38,11 +38,31 @@ public operator fun <A> SimpleDoc<A>.plus(b: SimpleDoc<A>): SimpleDoc<A> = Simpl
 })
 
 public fun <A> SimpleDoc<A>.renderString(): String {
-    val sb = StringBuilder()
-    renderDecorated(Unit, { _, _ -> }, { str -> sb.append(str); Unit }, { _, _ -> })
-    return sb.toString()
+    var curr = unDoc()
+    val buf = StringBuilder()
+    while (true) {
+        when (curr) {
+            is SimpleDocF.Fail -> throw IllegalStateException("Unexpected SimpleDoc.Fail in render")
+            is SimpleDocF.Nil -> return buf.toString()
+            is SimpleDocF.Text -> {
+                buf.append(curr.str)
+                curr = curr.doc.unDoc()
+            }
+            is SimpleDocF.Line -> {
+                buf.append("\n${spaces(curr.i)}")
+                curr = curr.doc.unDoc()
+            }
+            is SimpleDocF.AddAnnotation -> {
+                curr = curr.doc.unDoc()
+            }
+            is SimpleDocF.RemoveAnnotation -> {
+                curr = curr.doc.unDoc()
+            }
+        }
+    }
 }
 
+// TODO Rework ...
 public fun <A, B> SimpleDoc<A>.renderDecorated(
     empty: B,
     combine: (B, B) -> B,

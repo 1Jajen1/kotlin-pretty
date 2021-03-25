@@ -71,6 +71,7 @@ class ExampleTests {
     }
 }
 
+// Js has timeout of 2000 ms which is far to low for this...
 @Ignore
 class StackSafetyTests {
     fun pathological(n: Int): Doc<Nothing> =
