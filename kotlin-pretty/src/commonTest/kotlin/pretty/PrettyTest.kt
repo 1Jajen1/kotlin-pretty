@@ -1,5 +1,6 @@
 package pretty
 
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -70,6 +71,7 @@ class ExampleTests {
     }
 }
 
+@Ignore
 class StackSafetyTests {
     fun pathological(n: Int): Doc<Nothing> =
         generateSequence("foobar".doc()) { x -> listOf("a".doc(), x spaced "b".doc()).fillSep() }
