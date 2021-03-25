@@ -1,5 +1,9 @@
 package pretty
 
+import pretty.lazy.AndThen
+import pretty.lazy.Eval
+import pretty.lazy.flatMap
+
 public sealed class SimpleDocF<out A> {
     public object Fail : SimpleDocF<Nothing>()
     public object Nil : SimpleDocF<Nothing>()
@@ -9,9 +13,8 @@ public sealed class SimpleDocF<out A> {
     public data class RemoveAnnotation<A>(val doc: SimpleDoc<A>) : SimpleDocF<A>()
 }
 
-public data class SimpleDoc<out A>(val unDoc: Eval<SimpleDocF<A>>) {
-
-    override fun toString(): String = "SimpleDoc(unDoc=${unDoc()})"
+public class SimpleDoc<out A>(eval: Eval<SimpleDocF<A>>) {
+    public val unDoc: Eval<SimpleDocF<A>> = eval.memo()
 
     public companion object {
         public fun fail(): SimpleDoc<Nothing> = SimpleDoc(Eval.now(SimpleDocF.Fail))
@@ -35,11 +38,31 @@ public operator fun <A> SimpleDoc<A>.plus(b: SimpleDoc<A>): SimpleDoc<A> = Simpl
 })
 
 public fun <A> SimpleDoc<A>.renderString(): String {
-    val sb = StringBuilder()
-    renderDecorated(Unit, { _, _ -> }, { str -> sb.append(str); Unit }, { _, _ -> })
-    return sb.toString()
+    var curr = unDoc()
+    val buf = StringBuilder()
+    while (true) {
+        when (curr) {
+            is SimpleDocF.Fail -> throw IllegalStateException("Unexpected SimpleDoc.Fail in render")
+            is SimpleDocF.Nil -> return buf.toString()
+            is SimpleDocF.Text -> {
+                buf.append(curr.str)
+                curr = curr.doc.unDoc()
+            }
+            is SimpleDocF.Line -> {
+                buf.append("\n${spaces(curr.i)}")
+                curr = curr.doc.unDoc()
+            }
+            is SimpleDocF.AddAnnotation -> {
+                curr = curr.doc.unDoc()
+            }
+            is SimpleDocF.RemoveAnnotation -> {
+                curr = curr.doc.unDoc()
+            }
+        }
+    }
 }
 
+// TODO Rework ...
 public fun <A, B> SimpleDoc<A>.renderDecorated(
     empty: B,
     combine: (B, B) -> B,
