@@ -1,4 +1,4 @@
-# kotlin-pretty [ ![Download](https://api.bintray.com/packages/jannis/kotlin-pretty/kotlin-pretty/images/download.svg) ](https://bintray.com/jannis/kotlin-pretty/kotlin-pretty/_latestVersion)
+# kotlin-pretty
 > A pretty printer library for kotlin
 
 Kotlin-pretty is an extensible and easy to use pretty-printing library for kotlin. It can be used to render dynamic text in a size constrained environment (e.g. a terminal, message boxes, etc) in a human readable and (hopefully) pretty way.
@@ -25,9 +25,11 @@ In kotlin-pretty we provide a datatype `Doc` which represents a rich text docume
 
 ### Setup
 
+* The use of jitpack is hopefully temporary.
+
 ```groovy
 repositories {
-    maven { url 'https://dl.bintray.com/jannis/kotlin-pretty' }
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {

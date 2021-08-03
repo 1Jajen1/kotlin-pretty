@@ -1,5 +1,4 @@
 apply from: rootProject.file('gradle/targets.gradle')
-apply from: rootProject.file('gradle/publish.gradle')
 
 kotlin {
     sourceSets {

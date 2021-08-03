@@ -34,9 +34,9 @@ kotlin {
             }
         }
     }
-    js {
+    js(BOTH) {
+        browser {}
         nodejs {}
-        binaries.executable()
     }
 
     nativeTargets.forEach {
