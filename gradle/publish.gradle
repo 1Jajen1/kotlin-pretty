@@ -1,0 +1,60 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+def windowsPublications = ["mingwX64", "mingwX86"]
+def macosPublications = kotlin.targets.names.findAll {
+    it.startsWith("macos") || it.startsWith("ios") || it.startsWith("watchos") || it.startsWith("tvos")
+}
+def linuxPublications = publishing.publications.names - macosPublications - windowsPublications
+
+def publicationsFromThisPlatform = {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) return windowsPublications
+    else if (Os.isFamily(Os.FAMILY_MAC)) return macosPublications
+    else if (Os.isFamily(Os.FAMILY_UNIX)) return linuxPublications
+    else error("Expected either a windows, mac or linux host")
+}
+
+kotlin {
+    publishing {
+        repositories {
+            maven {
+                credentials {
+                    username "$System.env.BINTRAY_USER"
+                    password "$System.env.BINTRAY_API_KEY"
+                }
+                url = RELEASE_REPOSITORY
+            }
+        }
+        def targetPublications = publicationsFromThisPlatform()
+        tasks.withType(AbstractPublishToMaven)
+                .configureEach {
+                    onlyIf { it.publication.name in targetPublications }
+                }
+        publications.withType(MavenPublication).all {
+            pom {
+                name = POM_NAME
+                description = POM_DESCRIPTION
+                url = POM_URL
+                scm {
+                    url = POM_SCM_URL
+                    connection = POM_SCM_CONNECTION
+                    developerConnection = POM_SCM_DEV_CONNECTION
+                }
+                licenses {
+                    license {
+                        name = POM_LICENCE_NAME
+                        url = POM_LICENCE_URL
+                        distribution = POM_LICENCE_DIST
+                    }
+                }
+                developers {
+                    developer {
+                        name = "Jannis"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -35,8 +35,8 @@ kotlin {
         }
     }
     js(BOTH) {
-        browser {}
         nodejs {}
+        browser {}
     }
 
     nativeTargets.forEach {
