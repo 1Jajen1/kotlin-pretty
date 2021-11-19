@@ -33,7 +33,7 @@ repositories {
 }
 
 dependencies {
-    implementation "kotlin-pretty:kotlin-pretty:0.6.0"
+    implementation "com.github.1Jajen1.kotlin-pretty:kotlin-pretty:0.6.0"
 }
 ```
 
