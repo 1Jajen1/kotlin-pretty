@@ -16,11 +16,11 @@ Add the following to your `build.gradle`.
 
 ```groovy
 repositories {
-    maven { url "https://dl.bintray.com/jannis/kotlin-pretty" }
+    maven { url "https://jitpack.io" }
 }
 
 dependencies {
-    implementation "kotlin-pretty:kotlin-pretty:0.6.0"
+    implementation "com.github.1Jajen1.kotlin-pretty:kotlin-pretty:0.6.0"
 }
 ```
 
